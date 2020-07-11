@@ -1,9 +1,16 @@
 #pragma once;
 #include "game/board/move/move.hpp"
 #include <vector>
+#include <iostream>
 
 enum PieceType {
-    Pawn, Knight, Bishop, Rook, Queen, King, Empty
+    Pawn   = 0,
+    Knight = 1,
+    Bishop = 2,
+    Rook   = 3,
+    Queen  = 4,
+    King   = 5,
+    Empty  = 6
 };
 
 enum PieceColor {
@@ -12,12 +19,11 @@ enum PieceColor {
 
 class Piece {
 public:
-    int pos;
     bool firstMove;
     PieceColor color;
     PieceType pieceType;
 
-    Piece(int pos, bool firstMove, PieceColor pieceColor);
+    Piece(bool firstMove, PieceColor pieceColor);
     static PieceType getPieceTypeByNotation(char notation);
     static Piece* getPieceByPieceType(PieceType pieceType, int pos, PieceColor pieceColor);
 

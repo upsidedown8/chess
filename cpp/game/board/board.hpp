@@ -1,22 +1,25 @@
 #pragma once
 #include "game/board/square.hpp"
 #include "game/board/piece/piece.hpp"
+#include "game/board/rle.hpp"
 #include <vector>
 #include <string>
 
+struct Square {
+    Piece* piece;
+    
+};
+
 class Board {
-private:
-    Square board[64];
-
 public:
-    const int NUMBER_OF_SQUARES = 64;
-    const char* INITIAL_POSITION = "rnbqkbnr8p32#8PRNBQKBNR";
+    const char* INITIAL_POSITION  = "rnbqkbnr8p32#8PRNBQKBNR";
 
+    Square board[64];
     int enPassantPawnVirtual;
     PieceColor enPassantColour;
     std::vector<Move> whitePossibleMoves, blackPossibleMoves;
     std::vector<PieceType> whitePieces, blackPieces;
-    int* whiteDestinations, blackDestinations;
+    int whiteDestinations[64], blackDestinations[64];
     int whiteKingPos, blackKingPos;
 
     Board();
@@ -24,11 +27,9 @@ public:
 
     void reset();
 
-    void setPossibleMoves();
-    void setPositions(std::string board, bool encoded);
-    std::string toString();
-    std::string toString(bool encoded);
-    Square* getSquare(int pos);
+    void calcMoves();
+    void loadPosition(std::string board, bool encoded);
+    std::string toString(bool encoded = true);
 
     bool isUnderAttack(int squareCoord, PieceColor enemyColor);
     bool isOccupiedOrUnderAttack(int startPosExc, int endPosExc, PieceColor enemyColor);
@@ -39,6 +40,6 @@ public:
     static bool isOnBoard(int pos);
     static int findRank(int pos);
     static int findFile(int pos);
-    static int getAlgebraicFromPos(int pos);
     static int getPosFromAlgebraic(std::string algebraic);
+    static std::string getAlgebraicFromPos(int pos);
 };

@@ -1,24 +1,28 @@
 #include "piece.hpp"
 
-Piece::Piece(int pos, bool firstMove, PieceColor color) {
-    this->pos = pos;
+Piece::Piece(bool firstMove, PieceColor color) {
     this->color = color;
     this->firstMove = firstMove;
 }
 PieceType Piece::getPieceTypeByNotation(char notation) {
-    for (PieceType pieceType : PieceType.values())
-        if (pieceType.getCode() == toUpperCase(notation))
-            return pieceType;
-    return null;
+    switch (tolower(notation)) {
+        case 'p': return Pawn;
+        case 'n': return Knight;
+        case 'b': return Bishop;
+        case 'r': return Rook;
+        case 'q': return Queen;
+        case 'k': return King;
+        default:  return Empty;
+    }
 }
-Piece Piece::getPieceByPieceType(PieceType pieceType, int pos, PieceColor color) {
+Piece Piece::getPieceByPieceType(PieceType pieceType, PieceColor color) {
     switch(pieceType){
-        case Pawn:   return new Pawn(pos, color);
-        case Bishop: return new Bishop(pos, color);
-        case Knight: return new Knight(pos, color);
-        case Rook:   return new Rook(pos, color);
-        case Queen:  return new Queen(pos, color);
-        case King:   return new King(pos, color);
+        case Pawn:   return new Pawn(color);
+        case Bishop: return new Bishop(color);
+        case Knight: return new Knight(color);
+        case Rook:   return new Rook(color);
+        case Queen:  return new Queen(color);
+        case King:   return new King(color);
         default:     return NULL;
     }
 }

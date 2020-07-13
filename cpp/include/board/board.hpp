@@ -1,7 +1,7 @@
 #pragma once
-#include "game/board/square.hpp"
-#include "game/board/piece/piece.hpp"
-#include "game/board/rle.hpp"
+#include "board/square.hpp"
+#include "board/piece/piece.hpp"
+#include "board/rle.hpp"
 #include <vector>
 #include <string>
 

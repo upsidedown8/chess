@@ -6,7 +6,7 @@ int main() {
     RenderWindow window(VideoMode(400, 400), "Chess game");
 
     Texture t1;
-    t1.loadFromFile("img/w/bishop.png");
+    t1.loadFromFile("assets/w/bishop.png");
 
     Sprite s(t1);
 

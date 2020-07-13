@@ -1,4 +1,4 @@
-#include "bishop.hpp"
+#include "board/piece/bishop.hpp"
 
 Piece* Bishop::copy() {
     return new Bishop(this);

@@ -1,5 +1,5 @@
 #pragma once;
-#include "game/board/move/move.hpp"
+#include "board/move/move.hpp"
 #include <vector>
 #include <iostream>
 

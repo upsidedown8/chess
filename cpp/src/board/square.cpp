@@ -1,4 +1,4 @@
-#include "square.hpp"
+#include "board/square.hpp"
 
 Square::Square() {
     clear();

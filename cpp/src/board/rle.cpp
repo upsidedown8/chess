@@ -1,4 +1,4 @@
-#include "rle.hpp"
+#include "board/rle.hpp"
 
 std::string RLE::encode(const std::string& text) {
     std::stringstream ss{};

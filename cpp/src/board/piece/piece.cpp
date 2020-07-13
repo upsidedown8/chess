@@ -1,4 +1,4 @@
-#include "piece.hpp"
+#include "board/piece/piece.hpp"
 
 Piece::Piece(bool firstMove, PieceColor color) {
     this->color = color;

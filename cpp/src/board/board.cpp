@@ -1,4 +1,4 @@
-#include "board.hpp"
+#include "board/board.hpp"
 
 Board::Board() {
     whitePieces = std::vector<PieceType>{};

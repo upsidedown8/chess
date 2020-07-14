@@ -17,6 +17,8 @@ Color  whiteHighlight(0xf6, 0xf6, 0x82);
 Color whiteBackground(0xee, 0xee, 0xd2);
 Color  blackHighlight(0xba, 0xca, 0x44);
 Color blackBackground(0x77, 0x96, 0x56);
+Color  whiteIndicator(0xbe, 0xbe, 0xa8);
+Color  blackIndicator(0x5e, 0x78, 0x45);
 
 bool isWhiteSquare(int idx) {
     return idx % 16 < 8 ? !(idx % 2) : idx % 2;
@@ -55,20 +57,15 @@ void drawLabels(RenderWindow& window) {
         std::string((char)('a' + i));
         label.setString();
         label.setPosition(Vector2f(
-            size - fontSize,
-            size * i));
+            size * (i + 1) - 2 * labelLeftOffset,
+            size * 8 - fontSize));
         label.setColor(i%2 ? whiteBackground : blackBackground);
         window.draw(label);
     }
 }
 void addMoveIndicator(RenderWindow& window, int indicatorSquare) {
     CircleShape circle(indicatorRad);
-
-    if (isWhiteSquare(indicatorSquare)) {
-        circle.setFillColor(Color(0xff, 0xff, 0xff));
-    } else {
-        circle.setFillColor(Color(0xff, 0xff, 0xff));
-    }
+    circle.setFillColor(isWhiteSquare(indicatorSquare) ? whiteIndicator : blackIndicator);
     int extra = (size - indicatorRad*2) / 2;
     circle.setPosition(
         size * (indicatorSquare%8) + extra,

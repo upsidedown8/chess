@@ -4,38 +4,61 @@
 
 using namespace sf;
 
-constexpr int len = 600;
+constexpr int len = 1000;
 constexpr int size = len / 8;
 constexpr int indicatorRad = size / 5;
+constexpr int fontSize = size / 4;
+constexpr int labelLeftOffset = size / 15;
 
+Font labelFont;
 Texture wpieces[6]{}, bpieces[6]{};
 Sprite pieces[64]{};
+Color  whiteHighlight(0xf6, 0xf6, 0x82);
+Color whiteBackground(0xee, 0xee, 0xd2);
+Color  blackHighlight(0xba, 0xca, 0x44);
+Color blackBackground(0x77, 0x96, 0x56);
 
 bool isWhiteSquare(int idx) {
     return idx % 16 < 8 ? !(idx % 2) : idx % 2;
 }
 void drawBoard(RenderWindow& window, int highlightSquare) {
-    RectangleShape square(Vector2f(75, 75));
+    RectangleShape square(Vector2f(size, size));
 
     for (int i = 0; i < 8; i++) {
         for (int j = 0; j < 8; j++) {
             int val = i * 8 + j;
             if (isWhiteSquare(val)) {
-                if (val == highlightSquare) { // white
-                    square.setFillColor(Color(0xf6, 0xf6, 0x82));
-                } else {
-                    square.setFillColor(Color(0xee, 0xee, 0xd2));
-                }
+                square.setFillColor(val == highlightSquare ? whiteHighlight : whiteBackground);
             } else {
-                if (val == highlightSquare) { // black
-                    square.setFillColor(Color(0xba, 0xca, 0x44));
-                } else {
-                    square.setFillColor(Color(0x77, 0x96, 0x56));
-                }
+                square.setFillColor(val == highlightSquare ? blackHighlight : blackBackground);
             }
             square.setPosition(size * j, size * i);
             window.draw(square);
         }
+    }
+}
+void drawLabels(RenderWindow& window) {
+    Text label;
+    label.setFont(labelFont);
+    label.setCharacterSize(fontSize);
+
+    for (int i = 0; i < 8; i++) {
+        label.setString(std::to_string(8 - i));
+        label.setPosition(Vector2f(
+            labelLeftOffset, 
+            size * i));
+        label.setColor(i%2 ? whiteBackground : blackBackground);
+        window.draw(label);
+    }
+
+    for (int i = 0; i < 8; i++) {
+        std::string((char)('a' + i));
+        label.setString();
+        label.setPosition(Vector2f(
+            size - fontSize,
+            size * i));
+        label.setColor(i%2 ? whiteBackground : blackBackground);
+        window.draw(label);
     }
 }
 void addMoveIndicator(RenderWindow& window, int indicatorSquare) {
@@ -47,7 +70,6 @@ void addMoveIndicator(RenderWindow& window, int indicatorSquare) {
         circle.setFillColor(Color(0xff, 0xff, 0xff));
     }
     int extra = (size - indicatorRad*2) / 2;
-    std::cout << extra << std::endl;
     circle.setPosition(
         size * (indicatorSquare%8) + extra,
         size * (indicatorSquare/8) + extra);
@@ -63,7 +85,7 @@ void setPieces(RenderWindow& window, Board& board) {
                 int p = board.getIdx(piece);
                 pieces[k] = *new Sprite(board.isWhite(piece) ? wpieces[p] : bpieces[p]);
                 pieces[k].setPosition(size * j, size * i);
-                pieces[k].setScale(Vector2f(0.6, 0.6));
+                pieces[k].setScale(Vector2f(1, 1));
             }
             k++;
         }
@@ -80,8 +102,13 @@ int findIdxByPos(Vector2i pos) {
 
 int main() {
     RenderWindow window(VideoMode(len, len), "Chess");
-    Board board = *new Board();
+    
+    // set up board
+    Board board;
     board.loadPosition(std::string(board.INITIAL_POSITION), true);
+    
+    // load font
+    labelFont.loadFromFile("assets/fonts/ubuntu.ttf");
 
     // load piece graphics
     wpieces[board.getIdx(WPawn)  ].loadFromFile("assets/pieces/w/pawn.png");
@@ -99,8 +126,8 @@ int main() {
     bpieces[board.getIdx(BKing)  ].loadFromFile("assets/pieces/b/king.png");
 
     int idx = -1;
-    float dx = 0, dy = 0;
-    bool isMove = false;
+    bool isDrag = false;
+    bool primarySelected = false;
 
     while (window.isOpen()){
         Vector2i pos = Mouse::getPosition(window);
@@ -114,20 +141,15 @@ int main() {
             if (e.type == Event::MouseButtonPressed) {
                 if (e.mouseButton.button == Mouse::Left) {
                     idx = findIdxByPos(pos); // find square
-                    if (idx != -1 && board.isOccupied(idx)) {
-                        if (pieces[idx].getGlobalBounds().contains(pos.x, pos.y)) {
-                            isMove = true;
-                            // calc diffs
-                            dx = pos.x - pieces[idx].getPosition().x;
-                            dy = pos.y - pieces[idx].getPosition().y;
-                        }
-                    }
+                    if (idx != -1 && board.isOccupied(idx))
+                        if (pieces[idx].getGlobalBounds().contains(pos.x, pos.y))
+                            isDrag = true;
                 }
             }
             // drop event
             if (e.type == Event::MouseButtonReleased) {
                 if (e.mouseButton.button == Mouse::Left) {
-                    isMove = false;
+                    isDrag = false;
                     int newIdx = findIdxByPos(pos);
                     // validate and execute the move
                     if (newIdx != -1 && !board.isOccupied(newIdx)) {
@@ -141,21 +163,22 @@ int main() {
         window.clear();
         // draw the board tiles
         drawBoard(window, board.isOccupied(idx) ? idx : -1);
+        drawLabels(window);
         // add any move indicators above
-        addMoveIndicator(window, 30);
+        // addMoveIndicator(window, 30);
         // assign the sprites array pieces
         setPieces(window, board);
         // set new position while dragging, check bounds
-        if (isMove)
+        if (isDrag)
             pieces[idx].setPosition(
-                limitToRange(pos.x - dx, -25, len), 
-                limitToRange(pos.y - dy, -25, len));
+                limitToRange(pos.x - size / 2, -25, len), 
+                limitToRange(pos.y - size / 2, -25, len));
         // draw all pieces from board
         for (int i = 0; i < 64; i++)
-            if (board.isOccupied(i) && !(isMove && idx == i))
+            if (board.isOccupied(i) && !(isDrag && idx == i))
                 window.draw(pieces[i]);
-        // draw dragged piece so it is on top
-        if (isMove)
+        // draw dragged piece last so it is on top
+        if (isDrag)
             window.draw(pieces[idx]);
         window.display();
     }

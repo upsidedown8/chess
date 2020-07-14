@@ -50,13 +50,13 @@ public enum BoardGraphicSet {
     }
         public Color backgroundColour(Colour colour){
             if (colour.isWhite())
-                return new Color(238, 238, 210);
-            return new Color(118, 150, 86);
+                return new Color(238, 238, 210); // #EEEED2
+            return new Color(118, 150, 86);      // #769656
         }
         public Color highlightColour(Colour colour){
             if (colour.isWhite())
-                return new Color(246, 246, 130);
-            return new Color(186, 202, 68);
+                return new Color(246, 246, 130); // #F6F682
+            return new Color(186, 202, 68);      // #BACA44
         }
     };
 

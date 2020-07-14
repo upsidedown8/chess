@@ -1,4 +1,4 @@
-#include "board/move/move.hpp"
+#include "board/move.hpp"
 
 Move::Move(const Move* move) {
     startPos = move->startPos;

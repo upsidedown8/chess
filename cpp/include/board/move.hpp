@@ -1,5 +1,4 @@
 #pragma once
-#include "board/piece/piece.hpp"
 #include <vector>
 #include <math.h>
 

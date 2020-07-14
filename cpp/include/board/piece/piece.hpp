@@ -1,4 +1,4 @@
-#pragma once;
+#pragma once
 #include "board/move/move.hpp"
 #include <vector>
 #include <iostream>

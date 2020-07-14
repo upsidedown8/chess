@@ -2,7 +2,7 @@
 
 std::string RLE::encode(const std::string& text) {
     std::stringstream ss{};
-    for (int textIndex = 0; textIndex < text.length(); textIndex++){
+    for (size_t textIndex = 0; textIndex < text.length(); textIndex++){
         int rl = 1;
         while (textIndex+1 < text.length() && text[textIndex] == text[textIndex+1]){
             rl++;
@@ -16,7 +16,7 @@ std::string RLE::encode(const std::string& text) {
 }
 std::string RLE::decode(const std::string& text) {
     std::stringstream ss{};
-    int textIndex = 0;
+    size_t textIndex = 0;
     while (textIndex < text.length()) {
         int digits = 0;
         while(isdigit(text[textIndex + digits]))

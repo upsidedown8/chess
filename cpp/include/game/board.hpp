@@ -85,6 +85,7 @@ public:
     static int findFile(int pos);
 
     static bool isWhite(Square piece);
+    static Square swapColour(Square piece);
     static Square getPiece(Square piece, bool white);
     // static int getPosFromAlgebraic(string algebraic);
     // static string getAlgebraicFromPos(int pos);

@@ -2,7 +2,10 @@
 
 class CastleMove: public Move {
 public:
-    CastleMove();
+    Square rookPiece;
+    bool isKingSide;
+    int rookStart, rookEnd;
+    CastleMove(Board &board, int start, int end);
 
     virtual void doMove(Board &board);
     virtual void undoMove(Board &board);

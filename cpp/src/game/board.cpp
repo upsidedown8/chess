@@ -95,9 +95,6 @@ void Board::clearSquare(int idx) {
 bool Board::isOccupied(int idx) {
     return squareAt(idx) != Empty;
 }
-bool Board::isWhite(Square piece) {
-    return piece > 0;
-}
 int Board::getIdx(Square piece) {
     return abs(piece) - 1;
 }
@@ -228,6 +225,12 @@ int Board::findFile(int pos) {
     return pos % 8;
 }
 
+bool Board::isWhite(Square piece) {
+    return piece > 0;
+}
+Square Board::swapColour(Square piece) {
+    return -piece;
+}
 Square Board::getPiece(Square piece, bool white) {
     return abs(piece) * (white ? 1 : -1);
 }

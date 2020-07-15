@@ -2,7 +2,9 @@
 
 class EnPassantMove: public Move {
 public:
-    EnPassantMove();
+    int enemyPawnPos;
+    Square endPiece;
+    EnPassantMove(Board &board, int start, int end);
 
     virtual void doMove(Board &board);
     virtual void undoMove(Board &board);

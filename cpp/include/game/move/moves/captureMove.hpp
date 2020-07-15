@@ -2,7 +2,8 @@
 
 class CaptureMove: public Move {
 public:
-    CaptureMove();
+    Square endPiece;
+    CaptureMove(Board &board, int start, int end);
 
     virtual void doMove(Board &board);
     virtual void undoMove(Board &board);

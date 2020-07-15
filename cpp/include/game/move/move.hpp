@@ -15,6 +15,8 @@ enum MoveInfo {
 };
 
 class Move {
+protected:
+    void init(Board &board, int start, int end);
 public:
     Square startPiece;
     bool isCapture;
@@ -22,6 +24,6 @@ public:
 
     bool operator==(Move &other);
 
-    virtual void doMove(const Board &board);
-    virtual void undoMove(const Board &board);
+    virtual void doMove(Board &board);
+    virtual void undoMove(Board &board);
 };

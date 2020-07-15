@@ -194,7 +194,7 @@ void ChessWindow::drawPieces(bool isDrag, int primaryIdx, Vector2i pos) {
             if (game.board.isOccupied(idx)) {
                 Square piece = game.board[idx];
                 int p = game.board.getIdx(piece);
-                Sprite pieceSprite = *new Sprite(game.board.isWhite(piece) ? wpieces[p] : bpieces[p]);
+                Sprite pieceSprite = *new Sprite(Board::isWhite(piece) ? wpieces[p] : bpieces[p]);
                 if (isDrag && primaryIdx == idx) {
                     pieceSprite.setPosition(
                         limitToRange(pos.x - size / 2, -size / 5, len), 

@@ -1,6 +1,11 @@
 #pragma once
 #include "game/rle.hpp"
 #include "game/move/move.hpp"
+#include "game/move/moves/captureMove.hpp"
+#include "game/move/moves/castleMove.hpp"
+#include "game/move/moves/enPassantMove.hpp"
+#include "game/move/moves/promotionMove.hpp"
+#include "game/move/moves/simpleMove.hpp"
 #include <vector>
 #include <string>
 
@@ -61,9 +66,8 @@ public:
 
     void calcMoves();
     void loadPosition(string board, bool encoded);
-    void emptySquare(int idx);
+    void clearSquare(int idx);
     bool isOccupied(int idx);
-    bool isWhite(Square piece);
     int getIdx(Square piece);
     
     string toString(bool encoded = true);
@@ -79,6 +83,9 @@ public:
     static bool isOnBoard(int pos);
     static int findRank(int pos);
     static int findFile(int pos);
+
+    static bool isWhite(Square piece);
+    static Square getPiece(Square piece, bool white);
     // static int getPosFromAlgebraic(string algebraic);
     // static string getAlgebraicFromPos(int pos);
 };

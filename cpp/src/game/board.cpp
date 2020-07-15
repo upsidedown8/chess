@@ -89,7 +89,7 @@ void Board::loadPosition(string board, bool encoded) {
         squareAt(i) = result;
     }
 }
-void Board::emptySquare(int idx) {
+void Board::clearSquare(int idx) {
     squareAt(idx) = Empty;
 }
 bool Board::isOccupied(int idx) {
@@ -226,6 +226,10 @@ int Board::findRank(int pos) {
 }
 int Board::findFile(int pos) {
     return pos % 8;
+}
+
+Square Board::getPiece(Square piece, bool white) {
+    return abs(piece) * (white ? 1 : -1);
 }
 
 // int Board::getPosFromAlgebraic(std::string algebraic) {

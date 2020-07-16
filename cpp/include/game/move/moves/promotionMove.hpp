@@ -6,6 +6,7 @@ public:
     Square endPiece;
 
     PromotionMove(Board &board, int startPos, int endPos);
+    PromotionMove(Board &board, int startPos, int endPos, Square promotionPiece);
 
     virtual void doMove(Board &board);
     virtual void undoMove(Board &board);

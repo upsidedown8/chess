@@ -1,4 +1,6 @@
 #pragma once
+#include <vector>
+#include <string>
 #include "game/rle.hpp"
 #include "game/move/move.hpp"
 #include "game/move/moves/captureMove.hpp"
@@ -6,16 +8,16 @@
 #include "game/move/moves/enPassantMove.hpp"
 #include "game/move/moves/promotionMove.hpp"
 #include "game/move/moves/simpleMove.hpp"
-#include <vector>
-#include <string>
 
-constexpr char PAWN_NOTATION   = 'p';
+const char INITIAL_POSITION[] = "rnbqkbnr8p32#8PRNBQKBNR";
+
+constexpr char   PAWN_NOTATION = 'p';
 constexpr char KNIGHT_NOTATION = 'n';
 constexpr char BISHOP_NOTATION = 'b';
-constexpr char ROOK_NOTATION   = 'r';
-constexpr char QUEEN_NOTATION  = 'q';
-constexpr char KING_NOTATION   = 'k';
-constexpr char EMPTY_NOTATION  = '#';
+constexpr char   ROOK_NOTATION = 'r';
+constexpr char  QUEEN_NOTATION = 'q';
+constexpr char   KING_NOTATION = 'k';
+constexpr char  EMPTY_NOTATION = '#';
 
 constexpr int  NUMBER_OF_SQUARES = 64;
 
@@ -25,9 +27,10 @@ constexpr int BISHOP_MOVE_VECTORS[] { -9, -7, 7, 9 };
 constexpr int   ROOK_MOVE_VECTORS[] { -8, -1, 1, 8 };
 constexpr int  QUEEN_MOVE_VECTORS[] { -9, -8, -7, -1, 1, 7, 8, 9 };
 constexpr int   KING_MOVE_VECTORS[] { -9, -8, -7, -1, 1, 7, 8, 9 };
+constexpr int          ROOK_FILES[] { 0, 7 };
 
 enum Square {
-    Empty   = 0,
+    Empty   =  0,
     BPawn   = -1, WPawn   = 1,
     BKnight = -2, WKnight = 2,
     BBishop = -3, WBishop = 3,
@@ -50,13 +53,19 @@ private:
     void findQueenMoves(int idx, bool white);
     void findKingMoves(int idx, bool white);
 
+    void addMove(bool white, Move &move);
+
+    bool kingFirstMove(bool white);
+    bool rookFile0FirstMove(bool white);
+    bool rookFile7FirstMove(bool white);
+
+    bool isUnderAttack(int squareCoord, bool white);
+    bool isOccupiedOrUnderAttack(int startPosExc, int endPosExc, bool white);
+
 public:
-    const char* INITIAL_POSITION  = "rnbqkbnr8p32#8PRNBQKBNR";
-    // int enPassantPawnVirtual;
-    // PieceColor enPassantColour;
+    int enPassantVirtual;
+    bool whiteDestinations[64], blackDestinations[64];
     vector<Move> whiteMoves, blackMoves;
-    // int whiteDestinations[64], blackDestinations[64];
-    // int whiteKingPos, blackKingPos;
 
     Board();
 
@@ -68,25 +77,20 @@ public:
     void loadPosition(string board, bool encoded);
     void clearSquare(int idx);
     bool isOccupied(int idx);
+    bool isOccupied(Square square);
     int getIdx(Square piece);
     
     string toString(bool encoded = true);
 
     vector<Move> getPossibleMoves(int idx);
-
-    // bool isUnderAttack(int squareCoord, PieceColor enemyColor);
-    // bool isOccupiedOrUnderAttack(int startPosExc, int endPosExc, PieceColor enemyColor);
     // bool isInCheck(Player* current);
     // bool isInCheckMate(Player* current);
     // bool isLowMaterial(Player* player);
 
-    static bool isOnBoard(int pos);
     static int findRank(int pos);
     static int findFile(int pos);
-
+    static bool isOnBoard(int pos);
     static bool isWhite(Square piece);
     static Square swapColour(Square piece);
     static Square getPiece(Square piece, bool white);
-    // static int getPosFromAlgebraic(string algebraic);
-    // static string getAlgebraicFromPos(int pos);
 };

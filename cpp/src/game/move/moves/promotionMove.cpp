@@ -6,6 +6,12 @@ PromotionMove::PromotionMove(Board &board, int startPos, int endPos) {
     endPiece = isCapture ? board[end] : Empty;
     promotionPiece = Board::getPiece(WQueen, Board::isWhite(startPiece));
 }
+PromotionMove::PromotionMove(Board &board, int startPos, int endPos, Square promotionPiece) {
+    init(board, start, end);
+    isCapture = board.isOccupied(end);
+    endPiece = isCapture ? board[end] : Empty;
+    this->promotionPiece = Board::getPiece(promotionPiece, Board::isWhite(startPiece));
+}
 
 void PromotionMove::doMove(Board &board) {
     board.clearSquare(start);

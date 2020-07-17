@@ -1,7 +1,7 @@
 #pragma once
+#include "game/board.hpp"
 #include <vector>
 #include <math.h>
-#include "game/board.hpp"
 
 enum MoveInfo {
     Success,
@@ -24,6 +24,6 @@ public:
 
     bool operator==(Move &other);
 
-    virtual void doMove(Board &board);
-    virtual void undoMove(Board &board);
+    virtual void doMove(Board &board) = 0;
+    virtual void undoMove(Board &board) = 0;
 };

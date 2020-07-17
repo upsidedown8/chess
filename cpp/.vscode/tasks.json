@@ -12,11 +12,32 @@
                 "src/game/*.cpp",
                 "src/game/move/*.cpp",
                 "src/game/move/moves/*.cpp",
-                "src/game/player/*.cpp",
                 "src/ui/*.cpp",
                 "-lsfml-graphics",
                 "-lsfml-window",
                 "-lsfml-system",
+                "-g",
+                "-O"//,
+                //"-Wall"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        { // build test/test.cpp and include relevant files
+            "label": "C++ Build test file",
+            "type": "shell",
+            "command": "g++",
+            "args": [
+                "-o${cwd}/build/test",
+                "-Iinclude",
+                "test/*.cpp",
+                // "src/game/rle.cpp",
+                // "src/game/board.cpp",
+                // "src/game/position.cpp",
+                // "src/game/move/*.cpp",
+                // "src/game/move/moves/*.cpp",
                 "-g",
                 "-O",
                 "-Wall"

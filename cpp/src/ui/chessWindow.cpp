@@ -107,19 +107,19 @@ void ChessWindow::setup() {
     labelFont.loadFromFile("assets/fonts/ubuntu.ttf");
 
     // load piece graphics
-    wpieces[game.board.getIdx(WPawn)  ].loadFromFile("assets/pieces/w/pawn.png");
-    wpieces[game.board.getIdx(WKnight)].loadFromFile("assets/pieces/w/knight.png");
-    wpieces[game.board.getIdx(WBishop)].loadFromFile("assets/pieces/w/bishop.png");
-    wpieces[game.board.getIdx(WRook)  ].loadFromFile("assets/pieces/w/rook.png");
-    wpieces[game.board.getIdx(WQueen) ].loadFromFile("assets/pieces/w/queen.png");
-    wpieces[game.board.getIdx(WKing)  ].loadFromFile("assets/pieces/w/king.png");
+    wpieces[game.moveCalculator.board.getIdx(WPawn)  ].loadFromFile("assets/pieces/w/pawn.png");
+    wpieces[game.moveCalculator.board.getIdx(WKnight)].loadFromFile("assets/pieces/w/knight.png");
+    wpieces[game.moveCalculator.board.getIdx(WBishop)].loadFromFile("assets/pieces/w/bishop.png");
+    wpieces[game.moveCalculator.board.getIdx(WRook)  ].loadFromFile("assets/pieces/w/rook.png");
+    wpieces[game.moveCalculator.board.getIdx(WQueen) ].loadFromFile("assets/pieces/w/queen.png");
+    wpieces[game.moveCalculator.board.getIdx(WKing)  ].loadFromFile("assets/pieces/w/king.png");
 
-    bpieces[game.board.getIdx(BPawn)  ].loadFromFile("assets/pieces/b/pawn.png");
-    bpieces[game.board.getIdx(BKnight)].loadFromFile("assets/pieces/b/knight.png");
-    bpieces[game.board.getIdx(BBishop)].loadFromFile("assets/pieces/b/bishop.png");
-    bpieces[game.board.getIdx(BRook)  ].loadFromFile("assets/pieces/b/rook.png");
-    bpieces[game.board.getIdx(BQueen) ].loadFromFile("assets/pieces/b/queen.png");
-    bpieces[game.board.getIdx(BKing)  ].loadFromFile("assets/pieces/b/king.png");
+    bpieces[game.moveCalculator.board.getIdx(BPawn)  ].loadFromFile("assets/pieces/b/pawn.png");
+    bpieces[game.moveCalculator.board.getIdx(BKnight)].loadFromFile("assets/pieces/b/knight.png");
+    bpieces[game.moveCalculator.board.getIdx(BBishop)].loadFromFile("assets/pieces/b/bishop.png");
+    bpieces[game.moveCalculator.board.getIdx(BRook)  ].loadFromFile("assets/pieces/b/rook.png");
+    bpieces[game.moveCalculator.board.getIdx(BQueen) ].loadFromFile("assets/pieces/b/queen.png");
+    bpieces[game.moveCalculator.board.getIdx(BKing)  ].loadFromFile("assets/pieces/b/king.png");
 
     whiteHighlight  = *new Color(0xf6, 0xf6, 0x82);
     whiteBackground = *new Color(0xee, 0xee, 0xd2);
@@ -191,9 +191,9 @@ void ChessWindow::drawPieces(bool isDrag, int primaryIdx, Vector2i pos) {
     for (int i = 0; i < 8; i++) {
         for (int j = 0; j < 8; j++) {
             int idx = i * 8 + j;
-            if (game.board.isOccupied(idx)) {
-                Square piece = game.board[idx];
-                int p = game.board.getIdx(piece);
+            if (game.moveCalculator.board.isOccupied(idx)) {
+                Square piece = game.moveCalculator.board[idx];
+                int p = game.moveCalculator.board.getIdx(piece);
                 Sprite pieceSprite = *new Sprite(Board::isWhite(piece) ? wpieces[p] : bpieces[p]);
                 if (isDrag && primaryIdx == idx) {
                     pieceSprite.setPosition(

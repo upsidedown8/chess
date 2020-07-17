@@ -1,4 +1,6 @@
+#pragma once
 #include "game/move/move.hpp"
+#include "game/board.hpp"
 
 class PromotionMove: public Move {
 public:

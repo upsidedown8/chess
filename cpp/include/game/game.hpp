@@ -1,10 +1,25 @@
+#pragma once
 #include "game/board.hpp"
 #include "game/move/move.hpp"
+#include "game/move/moveStack.hpp"
+#include "game/position.hpp"
+
+enum GameStatus {
+    WhiteToPlay,
+    BlackToPlay,
+    WhiteWon,
+    BlackWon,
+    Stalemate,
+    Draw50Moves,
+    ThreefoldRepetition
+};
 
 class Game {
 public:
-    Board board;
-    
+    GameStatus status;
+    MoveStack whiteMoves, blackMoves;
+    Position moveCalculator;
+
     Game();
     void reset();
 

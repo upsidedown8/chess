@@ -1,8 +1,8 @@
 #pragma once
 #include "game/board.hpp"
+#include "game/position.hpp"
 #include "game/move/move.hpp"
 #include "game/move/moveStack.hpp"
-#include "game/position.hpp"
 
 enum GameStatus {
     WhiteToPlay,
@@ -17,17 +17,17 @@ enum GameStatus {
 class Game {
 public:
     GameStatus status;
-    MoveStack whiteMoves, blackMoves;
-    Position moveCalculator;
+    MoveStack *whiteMoves, *blackMoves;
+    Position *moveCalculator;
 
     Game();
     void reset();
 
-    MoveInfo makeMove(string uci);
+    MoveInfo makeMove(string& uci);
     MoveInfo makeMove(int start, int end);
     MoveInfo redoMove();
     MoveInfo undoMove();
 
-    vector<int> getMoveIndicators(int start);
-    vector<int> getPreviousHighlights();
+    vector<int>& getMoveIndicators(int start);
+    vector<int>& getPreviousHighlights();
 };

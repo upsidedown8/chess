@@ -17,7 +17,7 @@ private:
     void findQueenMoves(int idx, bool white);
     void findKingMoves(int idx, bool white);
 
-    void addMove(bool white, Move &move);
+    void addMove(bool white, Move *move);
 
     bool kingFirstMove(bool white);
     bool rookFile0FirstMove(bool white);
@@ -29,7 +29,7 @@ private:
 public:
     int enPassantVirtual;
     bool whiteDestinations[64], blackDestinations[64];
-    vector<Move&> whiteMoves, blackMoves;
+    vector<Move*> whiteMoves, blackMoves;
     Board board;
 
     Position();
@@ -37,10 +37,10 @@ public:
     void reset();
 
     void calcMoves();
-    vector<Move&> getPossibleMoves(int idx);
+    vector<Move*> getPossibleMoves(int idx);
 
-    void doMove(Move &move);
-    void undoMove(Move &move);
+    void doMove(Move *move);
+    void undoMove(Move *move);
 
     // bool isInCheck(Player* current);
     // bool isInCheckMate(Player* current);

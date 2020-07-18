@@ -1,3 +1,8 @@
+#include <iostream>
+#include <vector>
+
+using namespace std;
+
 struct Abstract {
     virtual void f() = 0; // pure virtual
     virtual void g() {}  // non-pure virtual
@@ -24,7 +29,11 @@ struct Concrete : Abstract {
 
 
 int main() {
+    cout << "hello" << endl;
 
+    vector<Abstract*> moves;
+
+    moves.push_back(new Concrete());
 
     return 0;
 };

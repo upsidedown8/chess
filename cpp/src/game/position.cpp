@@ -11,23 +11,23 @@ void Position::reset() {
     calcMoves();
 }
 
-void Position::doMove(Move &move) {
-    move.doMove(board);
+void Position::doMove(Move *move) {
+    move->doMove(board);
     calcMoves();
 }
-void Position::undoMove(Move &move) {
-    move.undoMove(board);
+void Position::undoMove(Move *move) {
+    move->undoMove(board);
     calcMoves();
 }
 
-vector<Move&> Position::getPossibleMoves(int idx) {
-    vector<Move&> moves;
+vector<Move*> Position::getPossibleMoves(int idx) {
+    vector<Move*> moves;
     Square square = board[idx];
     if (Board::isOccupied(square)) {
-        vector<Move&> *playerMoves = Board::isWhite(square) ? &whiteMoves : &blackMoves;
+        vector<Move*> *playerMoves = Board::isWhite(square) ? &whiteMoves : &blackMoves;
         for (size_t i = 0; i < playerMoves->size(); i++) {
-            Move &move = playerMoves->at(i);
-            if (move.start == idx) {
+            Move *move = playerMoves->at(i);
+            if (move->start == idx) {
                 moves.push_back(move);
             }
         }
@@ -45,14 +45,14 @@ void Position::findPawnMoves(int idx, bool white) {
             int doubleForwardMove = singleForwardMove + multiplier * 8;
             if (Board::isOnBoard(doubleForwardMove))
                 if (!board.isOccupied(doubleForwardMove) && rank == (white ? 6 : 1))
-                    addMove(white, *new SimpleMove(board, idx, doubleForwardMove));
+                    addMove(white, new SimpleMove(board, idx, doubleForwardMove));
             if (rank == (white ? 1 : 6)) {
-                addMove(white, *new PromotionMove(board, idx, singleForwardMove, WKnight));
-                addMove(white, *new PromotionMove(board, idx, singleForwardMove, WBishop));
-                addMove(white, *new PromotionMove(board, idx, singleForwardMove, WRook));
-                addMove(white, *new PromotionMove(board, idx, singleForwardMove, WQueen));
+                addMove(white, new PromotionMove(board, idx, singleForwardMove, WKnight));
+                addMove(white, new PromotionMove(board, idx, singleForwardMove, WBishop));
+                addMove(white, new PromotionMove(board, idx, singleForwardMove, WRook));
+                addMove(white, new PromotionMove(board, idx, singleForwardMove, WQueen));
             } else {
-                addMove(white, *new SimpleMove(board, idx, singleForwardMove));
+                addMove(white, new SimpleMove(board, idx, singleForwardMove));
             }
         }
         int file = Board::findFile(idx);
@@ -66,12 +66,12 @@ void Position::findPawnMoves(int idx, bool white) {
                 if (Board::isOccupied(square)) {
                     if (white != Board::isWhite(square)) {
                         if (rank == (white ? 1 : 6)) {
-                            addMove(white, *new PromotionMove(board, idx, possiblePosition, WKnight));
-                            addMove(white, *new PromotionMove(board, idx, possiblePosition, WBishop));
-                            addMove(white, *new PromotionMove(board, idx, possiblePosition, WRook));
-                            addMove(white, *new PromotionMove(board, idx, possiblePosition, WQueen));
+                            addMove(white, new PromotionMove(board, idx, possiblePosition, WKnight));
+                            addMove(white, new PromotionMove(board, idx, possiblePosition, WBishop));
+                            addMove(white, new PromotionMove(board, idx, possiblePosition, WRook));
+                            addMove(white, new PromotionMove(board, idx, possiblePosition, WQueen));
                         } else {
-                            addMove(white, *new CaptureMove(board, idx, possiblePosition));
+                            addMove(white, new CaptureMove(board, idx, possiblePosition));
                         }
                     }
                 }
@@ -80,7 +80,7 @@ void Position::findPawnMoves(int idx, bool white) {
                 else if (enPassantVirtual == possiblePosition){
                     int actualPawnPos = enPassantVirtual + (white ? 8 : -8);
                     if (Board::isWhite(board[actualPawnPos]) != white) {
-                        addMove(white, *new EnPassantMove(board, idx, enPassantVirtual));
+                        addMove(white, new EnPassantMove(board, idx, enPassantVirtual));
                     }
                 }
             }
@@ -100,10 +100,10 @@ void Position::findKnightMoves(int idx, bool white) {
             Square square = board[possiblePosition];
             if (Board::isOccupied(square)){
                 if (Board::isWhite(square) != white)
-                    addMove(white, *new CaptureMove(board, idx, possiblePosition));
+                    addMove(white, new CaptureMove(board, idx, possiblePosition));
                 continue;
             }
-            else addMove(white, *new SimpleMove(board, idx, possiblePosition));
+            else addMove(white, new SimpleMove(board, idx, possiblePosition));
         }
     }
 }
@@ -121,10 +121,10 @@ void Position::findBishopMoves(int idx, bool white) {
             Square square = board[possiblePosition];
             if (Board::isOccupied(square)) {
                 if (Board::isWhite(square) != white)
-                    addMove(white, *new CaptureMove(board, idx, possiblePosition));
+                    addMove(white, new CaptureMove(board, idx, possiblePosition));
                 break;
             } else {
-                addMove(white, *new SimpleMove(board, idx, possiblePosition));
+                addMove(white, new SimpleMove(board, idx, possiblePosition));
             }
         }
     }
@@ -143,10 +143,10 @@ void Position::findRookMoves(int idx, bool white) {
             Square square = board[possiblePosition];
             if (Board::isOccupied(square)) {
                 if (Board::isWhite(square) != white)
-                    addMove(white, *new CaptureMove(board, idx, possiblePosition));
+                    addMove(white, new CaptureMove(board, idx, possiblePosition));
                 break;
             } else {
-                addMove(white, *new SimpleMove(board, idx, possiblePosition));
+                addMove(white, new SimpleMove(board, idx, possiblePosition));
             }
         }
     }
@@ -167,10 +167,10 @@ void Position::findQueenMoves(int idx, bool white) {
             Square square = board[possiblePosition];
             if (Board::isOccupied(square)) {
                 if (Board::isWhite(square) != white)
-                    addMove(white, *new CaptureMove(board, idx, possiblePosition));
+                    addMove(white, new CaptureMove(board, idx, possiblePosition));
                 break;
             } else {
-                addMove(white, *new SimpleMove(board, idx, possiblePosition));
+                addMove(white, new SimpleMove(board, idx, possiblePosition));
             }
         }
     }
@@ -188,7 +188,7 @@ void Position::findKingMoves(int idx, bool white) {
             continue;
         if (isOccupiedOrUnderAttack(idx, rookPosition, white))
             continue;
-        addMove(white, *new CastleMove(board, idx, idx + (rookFile == 7 ? 2 : -2)));
+        addMove(white, new CastleMove(board, idx, idx + (rookFile == 7 ? 2 : -2)));
     }
 
     for (int possibleMove : KING_MOVE_VECTORS){
@@ -203,16 +203,16 @@ void Position::findKingMoves(int idx, bool white) {
             Square square = board[possiblePosition];
             if (Board::isOccupied(square)) {
                 if (Board::isWhite(square) != white)
-                    addMove(white, *new CaptureMove(board, idx, possiblePosition));
+                    addMove(white, new CaptureMove(board, idx, possiblePosition));
                 continue;
             } else {
-                addMove(white, *new SimpleMove(board, idx, possiblePosition));
+                addMove(white, new SimpleMove(board, idx, possiblePosition));
             }
         }
     }
 }
 
-void Position::addMove(bool white, Move &move) {
+void Position::addMove(bool white, Move *move) {
     // perform checks:
     //   - doesn't result in check
     //   - king isn't already in check (block required)
@@ -223,15 +223,15 @@ void Position::addMove(bool white, Move &move) {
 }
 
 // TODO: Implement these functions
-// bool Board::kingFirstMove(bool white) {
-//     return true;
-// }
-// bool Board::rookFile0FirstMove(bool white) {
-//     return true;
-// }
-// bool Board::rookFile7FirstMove(bool white) {
-//     return true;
-// }
+bool Position::kingFirstMove(bool white) {
+    return true;
+}
+bool Position::rookFile0FirstMove(bool white) {
+    return true;
+}
+bool Position::rookFile7FirstMove(bool white) {
+    return true;
+}
 
 bool Position::isUnderAttack(int idx, bool white) {
     if (white)
@@ -296,9 +296,9 @@ void Position::calcMoves() {
         blackDestinations[i] = false;
     }
     for (size_t i = 0; i < whiteMoves.size(); i++)
-        whiteDestinations[whiteMoves.at(i).end] = true;
+        whiteDestinations[whiteMoves.at(i)->end] = true;
     for (size_t i = 0; i < blackMoves.size(); i++)
-        blackDestinations[blackMoves.at(i).end] = true;
+        blackDestinations[blackMoves.at(i)->end] = true;
     findKingMoves(whiteKingPos, true);
     findKingMoves(blackKingPos, false);
 }

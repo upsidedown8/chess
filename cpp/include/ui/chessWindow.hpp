@@ -31,7 +31,7 @@ private:
     void drawBoard(vector<int> highlightSquares);
     void drawLabels();
     void drawMoveIndicators(vector<int> moveIndicatorSquares);
-    void drawPieces(bool isDrag, int primaryIdx, Vector2i pos);
+    void drawPieces(bool isDrag, int primaryIdx, Vector2i pos, double x, double y);
     int limitToRange(int val, int min, int max);
     int findIdxByPos(Vector2i pos, int width, int height);
 

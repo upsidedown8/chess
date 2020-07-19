@@ -94,7 +94,7 @@ void ChessWindow::start() {
         drawBoard(highlightSquares);
         drawLabels();
         drawMoveIndicators(moveIndicatorSquares);
-        drawPieces(isDrag, primaryIdx, pos);
+        drawPieces(isDrag, primaryIdx, pos, width, height);
         window->display();
         lastPos = pos;
     }
@@ -107,19 +107,19 @@ void ChessWindow::setup() {
     labelFont.loadFromFile("assets/fonts/ubuntu.ttf");
 
     // load piece graphics
-    wpieces[game.moveCalculator.board.getIdx(WPawn)  ].loadFromFile("assets/pieces/w/pawn.png");
-    wpieces[game.moveCalculator.board.getIdx(WKnight)].loadFromFile("assets/pieces/w/knight.png");
-    wpieces[game.moveCalculator.board.getIdx(WBishop)].loadFromFile("assets/pieces/w/bishop.png");
-    wpieces[game.moveCalculator.board.getIdx(WRook)  ].loadFromFile("assets/pieces/w/rook.png");
-    wpieces[game.moveCalculator.board.getIdx(WQueen) ].loadFromFile("assets/pieces/w/queen.png");
-    wpieces[game.moveCalculator.board.getIdx(WKing)  ].loadFromFile("assets/pieces/w/king.png");
+    wpieces[game.moveCalculator->board.getIdx(WPawn)  ].loadFromFile("assets/pieces/w/pawn.png");
+    wpieces[game.moveCalculator->board.getIdx(WKnight)].loadFromFile("assets/pieces/w/knight.png");
+    wpieces[game.moveCalculator->board.getIdx(WBishop)].loadFromFile("assets/pieces/w/bishop.png");
+    wpieces[game.moveCalculator->board.getIdx(WRook)  ].loadFromFile("assets/pieces/w/rook.png");
+    wpieces[game.moveCalculator->board.getIdx(WQueen) ].loadFromFile("assets/pieces/w/queen.png");
+    wpieces[game.moveCalculator->board.getIdx(WKing)  ].loadFromFile("assets/pieces/w/king.png");
 
-    bpieces[game.moveCalculator.board.getIdx(BPawn)  ].loadFromFile("assets/pieces/b/pawn.png");
-    bpieces[game.moveCalculator.board.getIdx(BKnight)].loadFromFile("assets/pieces/b/knight.png");
-    bpieces[game.moveCalculator.board.getIdx(BBishop)].loadFromFile("assets/pieces/b/bishop.png");
-    bpieces[game.moveCalculator.board.getIdx(BRook)  ].loadFromFile("assets/pieces/b/rook.png");
-    bpieces[game.moveCalculator.board.getIdx(BQueen) ].loadFromFile("assets/pieces/b/queen.png");
-    bpieces[game.moveCalculator.board.getIdx(BKing)  ].loadFromFile("assets/pieces/b/king.png");
+    bpieces[game.moveCalculator->board.getIdx(BPawn)  ].loadFromFile("assets/pieces/b/pawn.png");
+    bpieces[game.moveCalculator->board.getIdx(BKnight)].loadFromFile("assets/pieces/b/knight.png");
+    bpieces[game.moveCalculator->board.getIdx(BBishop)].loadFromFile("assets/pieces/b/bishop.png");
+    bpieces[game.moveCalculator->board.getIdx(BRook)  ].loadFromFile("assets/pieces/b/rook.png");
+    bpieces[game.moveCalculator->board.getIdx(BQueen) ].loadFromFile("assets/pieces/b/queen.png");
+    bpieces[game.moveCalculator->board.getIdx(BKing)  ].loadFromFile("assets/pieces/b/king.png");
 
     whiteHighlight  = *new Color(0xf6, 0xf6, 0x82);
     whiteBackground = *new Color(0xee, 0xee, 0xd2);
@@ -187,24 +187,33 @@ void ChessWindow::drawMoveIndicators(vector<int> moveIndicatorSquares) {
         window->draw(circle);
     }
 }
-void ChessWindow::drawPieces(bool isDrag, int primaryIdx, Vector2i pos) {
+void ChessWindow::drawPieces(bool isDrag, int primaryIdx, Vector2i pos, double x, double y) {
     for (int i = 0; i < 8; i++) {
         for (int j = 0; j < 8; j++) {
             int idx = i * 8 + j;
-            if (game.moveCalculator.board.isOccupied(idx)) {
-                Square piece = game.moveCalculator.board[idx];
-                int p = game.moveCalculator.board.getIdx(piece);
+            if (game.moveCalculator->board.isOccupied(idx)) {
+                if (!(isDrag && primaryIdx == idx)) {
+                Square piece = game.moveCalculator->board[idx];
+                int p = game.moveCalculator->board.getIdx(piece);
                 Sprite pieceSprite = *new Sprite(Board::isWhite(piece) ? wpieces[p] : bpieces[p]);
-                if (isDrag && primaryIdx == idx) {
-                    pieceSprite.setPosition(
-                        limitToRange(pos.x - size / 2, -size / 5, len), 
-                        limitToRange(pos.y - size / 2, -size / 5, len));
-                } else {
-                    pieceSprite.setPosition(size * j, size * i);
-                }
+                pieceSprite.setPosition(size * j, size * i);
                 window->draw(pieceSprite);
+                }
             }
         }
+    }
+    
+    // draw the dragged piece on top
+    if (Board::isOnBoard(primaryIdx) && isDrag) {
+        int i = Board::findRank(primaryIdx);
+        int j = Board::findFile(primaryIdx);
+        Square piece = game.moveCalculator->board[primaryIdx];
+        int p = game.moveCalculator->board.getIdx(piece);
+        Sprite pieceSprite = *new Sprite(Board::isWhite(piece) ? wpieces[p] : bpieces[p]);
+        pieceSprite.setPosition(
+            x / len * limitToRange(pos.x - size / 2, -size / 5, len), 
+            y / len * limitToRange(pos.y - size / 2, -size / 5, len));
+        window->draw(pieceSprite);
     }
 }
 int ChessWindow::limitToRange(int val, int min, int max) {

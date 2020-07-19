@@ -22,9 +22,13 @@ public:
 
     Game();
     void reset();
+    bool isOver();
+
+    bool isValidStart(int start);
 
     MoveInfo makeMove(string& uci);
     MoveInfo makeMove(int start, int end);
+
     MoveInfo redoMove();
     MoveInfo undoMove();
 

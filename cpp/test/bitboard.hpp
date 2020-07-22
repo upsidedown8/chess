@@ -1,9 +1,29 @@
 #include <cstdint>
 #include <string>
+#include <iostream>
+#include "game/rle.hpp"
 
 typedef uint64_t U64;
 
+const int NUMBER_OF_SQUARES = 64;
+
 const char START_POSITION[] = "rnbqkbnr8p32#8PRNBQKBNR";
+
+const char B_PAWN_NOTATION   = 'p';
+const char B_KNIGHT_NOTATION = 'n';
+const char B_BISHOP_NOTATION = 'b';
+const char B_ROOK_NOTATION   = 'r';
+const char B_QUEEN_NOTATION  = 'q';
+const char B_KING_NOTATION   = 'k';
+
+const char W_PAWN_NOTATION   = 'P';
+const char W_KNIGHT_NOTATION = 'N';
+const char W_BISHOP_NOTATION = 'B';
+const char W_ROOK_NOTATION   = 'R';
+const char W_QUEEN_NOTATION  = 'Q';
+const char W_KING_NOTATION   = 'K';
+
+const char EMPTY_NOTATION    = '#';
 
 const U64 FILE_1 = 0x0101010101010101L;
 const U64 FILE_2 = 0x0202020202020202L;
@@ -31,5 +51,18 @@ public:
     BitBoard();
 
     void reset();
-    void fromString(std::string &board);
+    void zeroBoards();
+    void fromString(const std::string &board);
+
+    std::string toString();
+
+    U64 getMask(int pos);
+    U64 getMask(int rank, int file);
+
+    bool isOccupied(const U64 &board, int pos);
+    bool isOccupied(const U64 &board, int rank, int file);
+
+    void setPos(U64 &board, int pos, int val);
+
+    int countOccupied(U64 board);
 };

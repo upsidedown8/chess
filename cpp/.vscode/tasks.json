@@ -33,11 +33,7 @@
                 "-o${cwd}/build/test",
                 "-Iinclude",
                 "test/*.cpp",
-                "src/game/rle.cpp",
-                "src/game/board.cpp",
-                "src/game/position.cpp",
-                "src/game/move/*.cpp",
-                "src/game/move/moves/*.cpp",
+                "src/game/*.cpp",
                 "-g",
                 "-O",
                 "-Wall"

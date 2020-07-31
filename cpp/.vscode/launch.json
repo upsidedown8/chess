@@ -5,6 +5,25 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "g++ - Build and debug test file",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${cwd}/build/test",
+            "stopAtEntry": true,
+            "cwd": "${workspaceFolder}",
+            "externalConsole": true,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": false
+                }
+            ],
+            "preLaunchTask": "C++ Build test file",
+            "miDebuggerPath": "/usr/bin/gdb"
+        },
+        {
             "name": "g++ - Build and debug main file",
             "type": "cppdbg",
             "request": "launch",

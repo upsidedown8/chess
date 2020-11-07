@@ -1,7 +1,0 @@
-package game.board.move.exceptions;
-
-public class TryToUndoBeforeMoveMadeException extends MoveException {
-    public String toString(){
-        return "Undo limit reached.";
-    }
-}

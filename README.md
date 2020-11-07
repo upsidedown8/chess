@@ -1,2 +1,2 @@
-# java-chess
- Chess game in java
+# chess
+ Chess library in c++

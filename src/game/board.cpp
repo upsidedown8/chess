@@ -1,78 +1,35 @@
 #include "game/board.hpp"
 
-#include <sstream>
+#include "utils.hpp"
+
 #include <assert.h>
+#include <sstream>
 
-const uchar LSB_64_TABLE[64] = {
-   63, 30,  3, 32, 59, 14, 11, 33,
-   60, 24, 50,  9, 55, 19, 21, 34,
-   61, 29,  2, 53, 51, 23, 41, 18,
-   56, 28,  1, 43, 46, 27,  0, 35,
-   62, 31, 58,  4,  5, 49, 54,  6,
-   15, 52, 12, 40,  7, 42, 45, 16,
-   25, 57, 48, 13, 10, 39,  8, 44,
-   20, 47, 38, 22, 17, 37, 36, 26
-};
-const std::string NOTATION = "PNBRQKpnbrqk#";
+using namespace chess_cpp;
 
-U64 Board::hash() {
-    U64 h = 0ULL;
-    // for (uchar i = 0; i < NUM_SQUARES; i++)
-    //     if (PIECES[i] != EMPTY)
-    //         h ^= m_rand_table[i][PIECES[i]];
-    return h;
-}
-
-char Board::get_notation(Pieces piece, Colors color) {
-    size_t pos = piece + (color != WHITE) * 6;
-    assert(pos >= 0 && pos < NOTATION.length());
-    return NOTATION[pos];
-}
-void Board::from_notation(char c, Pieces *piece, Colors *color) {
-    size_t pos = NOTATION.find(c);
-    assert(pos != std::string::npos);
-    *piece = pos == NOTATION.length() -1
-        ? EMPTY
-        : (Pieces)(pos % 6);
-    *color = *piece == EMPTY
-        ? NONE
-        : (pos > 5
-            ? BLACK
-            : WHITE
-        );
-}
-
-void Board::init_tables() {
-    // set bit table & clear bit table
-
-    for (size_t i = 0; i < NUM_SQUARES; i++) {
-        m_set_bit_table[i] = 1ULL << i;
-        m_clr_bit_table[i] = ~m_set_bit_table[i];
-    }
-
-    // Zobrist hashing table
-    for (int i = 0; i < NUM_SQUARES; i++) {
-        for (int j = 0; j < 12; j++) {
-            // ensure the random number fills all 64 bits
-            m_rand_table[i][j] =
-                ((U64)rand() & 0x7fff)       +
-                ((U64)rand() & 0x7fff) << 15 + 
-                ((U64)rand() & 0x7fff) << 30 + 
-                ((U64)rand() & 0x7fff) << 45 +
-                ((U64)rand() & 0xf)    << 60;
-        }
-    }
-}
 void Board::zero_boards() {
-    for (int color = WHITE; color <= ALL; color++)
-        for (int piece = PAWN; piece <= KING; piece++)
-            m_bitboards[color][piece] = 0ULL;
+    for (int piece = WP; piece <= BK; piece++)
+        m_bitboards[piece] = 0ULL;
 }
 void Board::update_bitboards() {
-    for (int piece = PAWN; piece <= KING; piece++)
-        m_bitboards[ALL][piece] =
-            m_bitboards[WHITE][piece] |
-            m_bitboards[BLACK][piece];
+    for (int piece = WP; piece <= WK; piece++)
+        m_combined[piece] =
+            m_bitboards[from_color(piece, WHITE)] |
+            m_bitboards[from_color(piece, BLACK)];
+
+    for (size_t i = 0; i < NUM_SQUARES; i++)
+        m_pieces[i] = EMPTY;
+
+    uchar pos;
+    U64 bb;
+    for (int piece = WP; piece <= BK; piece++) {
+        bb = m_bitboards[piece];
+
+        while (bb) {
+            pos = pop_lsb(bb);
+            m_pieces[pos] = (Pieces)piece;
+        }
+    }
 }
 void Board::from_string(const std::string &str) {
     zero_boards();
@@ -80,72 +37,15 @@ void Board::from_string(const std::string &str) {
 
     assert(boardDecoded.length() == NUM_SQUARES);
 
-    Colors color;
     Pieces piece;
     U64 shift = 1ULL;
     for (int i = 0; i < NUM_SQUARES; i++, shift <<= 1) {
-        from_notation(boardDecoded[i], &piece, &color);
-        if (piece >= PAWN && piece <= KING &&
-            color >= WHITE && color <= BLACK) {
-                m_bitboards[color][piece] |= shift;
+        piece = from_notation(boardDecoded[i]);
+        if (piece >= WP && piece <= BK) {
+            m_bitboards[piece] |= shift;
         }
     }
-}
-
-bool Board::is_set(const U64 &board, uchar pos) {
-    return board & m_set_bit_table[pos];
-}
-
-void Board::set_pos(U64 &board, uchar pos) {
-    board |= m_set_bit_table[pos];
-}
-void Board::clr_pos(U64 &board, uchar pos) {
-    board &= m_clr_bit_table[pos];
-}
-
-uchar Board::count_occupied(U64 board) {
-    uchar count = 0;
-    while (board) {
-        board &= board-1;
-        count++;
-    }
-    return count;
-}
-uchar Board::pop_lsb(U64 &board) {
-    assert(board != 0);
-    U64 b = board ^ (board - 1);
-    U64 folded = (unsigned)((b & 0xffffffff) ^ (board >> 32));
-    board &= (board - 1);
-    return LSB_64_TABLE[(folded * 0x78291ACF) >> 26];
-}
-
-std::string Board::rle_encode(const std::string& text) {
-    std::stringstream ss;
-    for (size_t idx = 0; idx < text.length(); idx++){
-        int rl = 1;
-        while (idx+1 < text.length() && text[idx] == text[idx+1]){
-            rl++;
-            idx++;
-        }
-        if (rl > 1)
-            ss << rl;
-        ss << text[idx];
-    }
-    return ss.str();
-}
-std::string Board::rle_decode(const std::string& text) {
-    std::stringstream ss;
-    size_t idx = 0;
-    while (idx < text.length()) {
-        int digits = 0;
-        while(isdigit(text[idx + digits]))
-            digits++;
-        int runLength = digits > 0 ? stoi(text.substr(idx, idx + digits)) : 1;
-        for (int x = 0; x < runLength; x++)
-            ss << text[idx + digits];
-        idx += digits + 1;
-    }
-    return ss.str();
+    update_bitboards();
 }
 
 Board::Board() {
@@ -158,27 +58,32 @@ Board::Board(const std::string &str) {
 }
 
 void Board::reset() {
-    from_string("rnbqkbnr8p32#8PRNBQKBNR");
+    from_string("rnbqkbnr8p32.8PRNBQKBNR");
 }
 
-std::string Board::to_string() {
-    std::string result(NUM_SQUARES, '\0');
-    U64 shift = 1ULL;
-    for (int i = 0; i < NUM_SQUARES; i++, shift <<= 1) {
-        Colors color = ALL;
-        Pieces piece = EMPTY;
+std::string Board::to_string(bool prettyPrint) {
+    update_bitboards();
 
-        for (int c = WHITE; c <= BLACK; c++) {
-            for (int p = PAWN; piece <= KING; p++) {
-                if (m_bitboards[c][p] & shift) {
-                    piece = (Pieces)p;
-                    color = (Colors)c;
-                    break;
-                }
-            }
+    if (prettyPrint) {
+        std::stringstream ss;
+        ss << "  ";
+        for (char i = 'A'; i <= 'H'; i++)
+            ss << i << ' ';
+        ss << std::endl;
+
+        for (int i = 0; i < 8; i++) {
+            ss << std::to_string(8-i) << ' ';
+            for (int j = 0; j < 8; j++)
+                ss << get_notation(m_pieces[i * 8 + j]) << ' ';
+            ss << std::endl;
         }
 
-        result[i] = get_notation(piece, color);
+        return ss.str();
+    } else {
+        std::string result(NUM_SQUARES, '\0');
+        for (int i = 0; i < NUM_SQUARES; i++)
+            result[i] = get_notation(m_pieces[i]);
+
+        return rle_encode(result);
     }
-    return rle_encode(result);
 }

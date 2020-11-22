@@ -13,6 +13,8 @@ include_directories(
 set(
 	SRC_FILES
 	src/game/board.cpp
+	#src/game/movegen.cpp
+	src/game/utils.cpp
 )
 
 add_executable(

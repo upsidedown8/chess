@@ -9,37 +9,18 @@ namespace chess_cpp {
 
 void init_tables();
 
-/* -------------------------------------------------------------------------- */
-/*                               Zobrist hashing                              */
-/* -------------------------------------------------------------------------- */
-U64 hash(Pieces pieces[NUM_SQUARES]);
-
-/* -------------------------------------------------------------------------- */
-/*                                 Conversions                                */
-/* -------------------------------------------------------------------------- */
-char get_notation(Pieces piece);
-Pieces from_notation(char c);
-Pieces from_color(int piece, Colors color);
-
-std::string to_string(U64 bitboard);
-std::string to_string(Pieces piece);
+std::string bb_to_string(U64 bitboard);
 
 /* -------------------------------------------------------------------------- */
 /*                             Bitwise operations                             */
 /* -------------------------------------------------------------------------- */
-bool is_set(const U64 &board, uchar pos);
+bool is_set(const U64 &board, U8 pos);
 
-void set_pos(U64 &board, uchar pos);
-void clr_pos(U64 &board, uchar pos);
+void set_pos(U64 &board, U8 pos);
+void clr_pos(U64 &board, U8 pos);
 
-uchar count_occupied(U64 board);
-uchar pop_lsb(U64 &board);
-
-/* -------------------------------------------------------------------------- */
-/*                                     RLE                                    */
-/* -------------------------------------------------------------------------- */
-std::string rle_encode(const std::string& text);
-std::string rle_decode(const std::string& text);
+U8 count_occupied(U64 board);
+U8 pop_lsb(U64 &board);
 
 }
 

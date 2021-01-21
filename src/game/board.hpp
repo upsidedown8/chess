@@ -31,6 +31,9 @@ public:
     Board(const std::string &str);
 
     void reset();
+
+    std::string to_fen();
+    std::string to_string();
 };
 
 }

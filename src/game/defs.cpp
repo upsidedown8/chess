@@ -1,4 +1,4 @@
-#include "utils.hpp"
+#include "defs.hpp"
 
 #include <sstream>
 #include <assert.h>
@@ -20,7 +20,7 @@ const U8 LSB_64_TABLE[64] {
 U64 set_bit_table[NUM_SQUARES];
 U64 clr_bit_table[NUM_SQUARES];
 
-void chess_cpp::init_tables() {
+void chess_cpp::init() {
     // set bit table & clear bit table
     for (size_t i = 0; i < NUM_SQUARES; i++) {
         set_bit_table[i] = 1ULL << i;
@@ -46,20 +46,26 @@ std::string chess_cpp::bb_to_string(U64 bitboard) {
     return ss.str();
 }
 
+U8 chess_cpp::calc_pos(int rank, int file) {
+    return rank * 8 + file;
+}
+void chess_cpp::calc_rf(U8 pos, int &rank, int &file) {
+    file = pos % 8;
+    rank = pos / 8;
+}
+
 /* -------------------------------------------------------------------------- */
 /*                             Bitwise operations                             */
 /* -------------------------------------------------------------------------- */
 bool chess_cpp::is_set(const U64 &board, U8 pos) {
     return board & set_bit_table[pos];
 }
-
 void chess_cpp::set_pos(U64 &board, U8 pos) {
     board |= set_bit_table[pos];
 }
 void chess_cpp::clr_pos(U64 &board, U8 pos) {
     board &= clr_bit_table[pos];
 }
-
 U8 chess_cpp::count_occupied(U64 board) {
     U8 count = 0;
     while (board) {

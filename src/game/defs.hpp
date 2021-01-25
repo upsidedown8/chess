@@ -2,6 +2,7 @@
 #define CHESS_GAME_DEFS_HPP
 
 #include <cstdint>
+#include <string>
 
 #define NUM_SQUARES     64
 
@@ -48,6 +49,19 @@ enum Pieces {
     BP, BN, BB, BR, BQ, BK,
     NO_PIECE
 };
+
+void init();
+
+std::string bb_to_string(U64 bitboard);
+
+U8 calc_pos(int rank, int file);
+void calc_rf(U8 pos, int &rank, int &file);
+
+bool is_set(const U64 &board, U8 pos);
+void set_pos(U64 &board, U8 pos);
+void clr_pos(U64 &board, U8 pos);
+U8 count_occupied(U64 board);
+U8 pop_lsb(U64 &board);
 
 }
 

@@ -7,6 +7,8 @@
 
 using namespace chess_cpp;
 
+const std::string notation = "pnbrqkPNBRQK";
+
 void Board::zero_boards() {
     for (int piece = WP; piece <= BK; piece++)
         bitboards[piece] = 0ULL;
@@ -22,8 +24,8 @@ bool Board::from_string(const std::string &str) {
 
     // parse board
     int pos = 0;
-    U64 square = 1ULL;
-    while (square && pos < str.length()) {
+    U64 square = 0;
+    while (square < 64 && pos < str.length()) {
         int piece = NO_PIECE;
         switch (str[pos]) {
             case 'p': piece = BP; break;
@@ -49,7 +51,7 @@ bool Board::from_string(const std::string &str) {
             case '7':
             case '8':
             case '9':
-                square <<= (str[pos]-'0');
+                square += (str[pos]-'0');
                 break;
             
             case '/':
@@ -61,15 +63,15 @@ bool Board::from_string(const std::string &str) {
         }
 
         if (piece != NO_PIECE) {
-            bitboards[piece] |= square;
-            square <<= 1;
+            bitboards[piece] |= 1ULL << (63-square);
+            square++;
         }
 
         pos++;
     }
 
     // check the whole board was processed
-    if (1+pos++ >= str.length() || square) return false;
+    if (1+pos++ >= str.length() || square < 64) return false;
 
     // parse current move
     white_to_move = str[pos] == 'w';
@@ -101,7 +103,7 @@ bool Board::from_string(const std::string &str) {
 
     // en passant
     if (str[pos] == '-') {
-        en_passant = 0;
+        en_passant = not_on_board;
         pos+=2;
     } else {
         en_passant = (7-(str[pos]-'a')) + (str[pos+1]-'0')*8;
@@ -139,13 +141,51 @@ void Board::reset() {
 
 std::string Board::to_fen() {
     std::stringstream ss;
-    
+    U64 square = 1ULL;
+    int rank = 0, file = 0, empty = 0;
+    while (rank < 8) {
+        bool found = false;
+        for (int piece = WP; piece <= BK; piece++) {
+            if (bitboards[piece]&square) {
+                ss << notation[piece];
+                found = true;
+                break;
+            }
+        }
+        if (found) {
+            if (empty)
+                ss << empty;
+            empty = 0;
+        } else {
+            empty++;
+        }
+        square <<= 1;
+        if (++file >= 8) {
+            if (empty)      ss << empty;
+            if (rank++ < 7) ss << '/';
+            empty = file = 0;
+        }
+    }
+
+    ss << ' ' << (white_to_move ? 'w' : 'b') << ' ';
+
+    if (castling & WHITE_CASTLE_KS) ss << 'K';
+    if (castling & WHITE_CASTLE_QS) ss << 'Q';
+    if (castling & BLACK_CASTLE_KS) ss << 'k';
+    if (castling & BLACK_CASTLE_QS) ss << 'q';
+    if (!castling)                  ss << '-';
+
+    ss << ' ';
+    if (en_passant == not_on_board) ss << '-';
+    else                            ss << en_passant;
+    ss << ' ' << (int)half_move_count;
+    ss << ' ' << (int)full_move_count;
+
     return ss.str();
 }
 std::string Board::to_string() {
     U64 mask = 1;
     std::stringstream ss;
-    const std::string notation = "pnbrqkPNBRQK";
     for (int i = 0; i < 8; i++) {
         ss << (8-i) << ' ';
         for (int j = 0; j < 8; j++) {

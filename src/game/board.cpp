@@ -1,23 +1,19 @@
 #include "game/board.hpp"
 
-#include "utils.hpp"
-
 #include <assert.h>
 #include <sstream>
 
 using namespace chess_cpp;
 
-const std::string notation = "pnbrqkPNBRQK";
+char get_notation(int piece) {
+    const std::string notation = "pnbrqkPNBRQK";
+    return notation[(piece & 0b111) + (piece&Black ? 6 : 0)];
+}
 
 void Board::zero_boards() {
-    for (int piece = WP; piece <= BK; piece++)
-        bitboards[piece] = 0ULL;
-}
-void Board::update_bitboards() {
-    for (int piece = WP; piece <= WK; piece++)
-        combined[piece] =
-            bitboards[piece] |
-            bitboards[piece+BP];
+    for (int color : {White, Black})
+        for (int piece = Pawn; piece <= None; piece++)
+            bitboards[color | piece] = 0ULL;
 }
 bool Board::from_string(const std::string &str) {
     zero_boards();
@@ -26,21 +22,21 @@ bool Board::from_string(const std::string &str) {
     int pos = 0;
     U64 square = 0;
     while (square < 64 && pos < str.length()) {
-        int piece = NO_PIECE;
+        int piece = None;
         switch (str[pos]) {
-            case 'p': piece = BP; break;
-            case 'n': piece = BN; break;
-            case 'b': piece = BB; break;
-            case 'r': piece = BR; break;
-            case 'q': piece = BQ; break;
-            case 'k': piece = BK; break;
+            case 'p': piece = Black | Pawn;   break;
+            case 'n': piece = Black | Knight; break;
+            case 'b': piece = Black | Bishop; break;
+            case 'r': piece = Black | Rook;   break;
+            case 'q': piece = Black | Queen;  break;
+            case 'k': piece = Black | King;   break;
 
-            case 'P': piece = WP; break;
-            case 'N': piece = WN; break;
-            case 'B': piece = WB; break;
-            case 'R': piece = WR; break;
-            case 'Q': piece = WQ; break;
-            case 'K': piece = WK; break;
+            case 'P': piece = White | Pawn;   break;
+            case 'N': piece = White | Knight; break;
+            case 'B': piece = White | Bishop; break;
+            case 'R': piece = White | Rook;   break;
+            case 'Q': piece = White | Queen;  break;
+            case 'K': piece = White | King;   break;
 
             case '1':
             case '2':
@@ -62,7 +58,7 @@ bool Board::from_string(const std::string &str) {
                 return false;
         }
 
-        if (piece != NO_PIECE) {
+        if (piece != None) {
             bitboards[piece] |= 1ULL << (63-square);
             square++;
         }
@@ -121,8 +117,6 @@ bool Board::from_string(const std::string &str) {
     while (isdigit(str[pos]))
         full_move_count = full_move_count*10 + (str[pos++]-'0');
 
-    update_bitboards();
-
     return true;
 }
 
@@ -145,11 +139,13 @@ std::string Board::to_fen() {
     int rank = 0, file = 0, empty = 0;
     while (rank < 8) {
         bool found = false;
-        for (int piece = WP; piece <= BK; piece++) {
-            if (bitboards[piece]&square) {
-                ss << notation[piece];
-                found = true;
-                break;
+        for (int color : {White, Black}) {
+            for (int piece = Pawn; piece <= King; piece++) {
+                if (bitboards[color | piece] & square) {
+                    ss << get_notation(color | piece);
+                    found = true;
+                    break;
+                }
             }
         }
         if (found) {
@@ -190,11 +186,13 @@ std::string Board::to_string() {
         ss << (8-i) << ' ';
         for (int j = 0; j < 8; j++) {
             bool found = false;
-            for (int piece = WP; piece <= BK; piece++) {
-                if (bitboards[piece] & mask) {
-                    ss << notation[piece];
-                    found = true;
-                    break;
+            for (int color : {White, Black}) {
+                for (int piece = Pawn; piece <= King; piece++) {
+                    if (bitboards[color | piece] & mask) {
+                        ss << get_notation(color | piece);
+                        found = true;
+                        break;
+                    }
                 }
             }
             if (!found)

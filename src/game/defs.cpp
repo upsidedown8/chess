@@ -3,9 +3,15 @@
 #include <sstream>
 #include <assert.h>
 
-using namespace chess_cpp;
+chess_cpp::U64 chess_cpp::RANKS[256];
+chess_cpp::U64 chess_cpp::FILES[256];
+chess_cpp::U64 chess_cpp::NOT_RANKS[256];
+chess_cpp::U64 chess_cpp::NOT_FILES[256];
 
-const U8 LSB_64_TABLE[64] {
+chess_cpp::U64 chess_cpp::ROOK_MASKS[NUM_SQUARES];
+chess_cpp::U64 chess_cpp::BISHOP_MASKS[NUM_SQUARES];
+
+const chess_cpp::U8 LSB_64_TABLE[64] {
     63, 30,  3, 32, 25, 41, 22, 33,
     15, 50, 42, 13, 11, 53, 19, 34,
     61, 29,  2, 51, 21, 43, 45, 10,
@@ -17,17 +23,108 @@ const U8 LSB_64_TABLE[64] {
 };
 
 // tables
-U64 set_bit_table[NUM_SQUARES];
-U64 clr_bit_table[NUM_SQUARES];
+chess_cpp::U64 SET_BIT_TABLE[NUM_SQUARES];
+chess_cpp::U64 CLEAR_BIT_TABLE[NUM_SQUARES];
+
+/* -------------------------------------------------------------------------- */
+/*                            Initialize all tables                           */
+/* -------------------------------------------------------------------------- */
+chess_cpp::U64 gen_rook_moves(int start, chess_cpp::U64 occupancy) {
+    int rank, file;
+    chess_cpp::calc_rf(start, rank, file);
+    chess_cpp::U64 result = 0;
+
+    for (int r=rank-1; r>=0; r--) {
+        result |= (1ULL<<chess_cpp::calc_pos(r,file));
+        if (occupancy & (1ULL<<chess_cpp::calc_pos(r,file)))
+            break;
+    }
+    for (int r=rank+1; r<=7; r++) {
+        result |= (1ULL<<chess_cpp::calc_pos(r,file));
+        if (occupancy & (1ULL<<chess_cpp::calc_pos(r,file)))
+            break;
+    }
+    for (int f=file-1; f>=0; f--) {
+        result |= (1ULL<<chess_cpp::calc_pos(rank,f));
+        if (occupancy & (1ULL<<chess_cpp::calc_pos(rank,f)))
+            break;
+    }
+    for (int f=file+1; f<=7; f++) {
+        result |= (1ULL<<chess_cpp::calc_pos(rank,f));
+        if (occupancy & (1ULL<<chess_cpp::calc_pos(rank,f)))
+            break;
+    }
+
+    return result;
+}
+chess_cpp::U64 gen_bishop_moves(int start, chess_cpp::U64 occupancy) {
+    int rank, file;
+    chess_cpp::calc_rf(start, rank, file);
+    chess_cpp::U64 result = 0;
+
+    for (int r=rank-1, f=file-1; r>=0&&f>=0; r--, f--) {
+        result |= (1ULL<<chess_cpp::calc_pos(r,f));
+        if (occupancy & (1ULL<<chess_cpp::calc_pos(r,f)))
+            break;
+    }
+    for (int r=rank+1, f=file-1; r<=7&&f>=0; r++, f--) {
+        result |= (1ULL<<chess_cpp::calc_pos(r,f));
+        if (occupancy & (1ULL<<chess_cpp::calc_pos(r,f)))
+            break;
+    }
+    for (int r=rank-1, f=file+1; r>=0&&f<=7; r--, f++) {
+        result |= (1ULL<<chess_cpp::calc_pos(r,f));
+        if (occupancy & (1ULL<<chess_cpp::calc_pos(r,f)))
+            break;
+    }
+    for (int r=rank+1, f=file+1; r<=7&&f<=7; r++, f++) {
+        result |= (1ULL<<chess_cpp::calc_pos(r,f));
+        if (occupancy & (1ULL<<chess_cpp::calc_pos(r,f)))
+            break;
+    }
+
+    return result;
+}
 
 void chess_cpp::init() {
     // set bit table & clear bit table
     for (size_t i = 0; i < NUM_SQUARES; i++) {
-        set_bit_table[i] = 1ULL << i;
-        clr_bit_table[i] = ~set_bit_table[i];
+        SET_BIT_TABLE[i] = 1ULL << i;
+        CLEAR_BIT_TABLE[i] = ~SET_BIT_TABLE[i];
     }
+
+    // ranks
+    for (int i = 0; i < 8; i++)
+        RANKS[1<<i] = 0xffULL<<(8*(7-i));
+    for (int i = 0; i < 256; i++) {
+        for (int j = 0; j < 8; j++)
+            if (i & (1<<j))
+                RANKS[i] |= RANKS[1<<j];
+        NOT_RANKS[i] = ~RANKS[i];
+    }
+
+    // files
+    for (int i = 0; i < 8; i++)
+        FILES[1<<i] = 0x0101010101010101UL<<i;
+    for (int i = 0; i < 256; i++) {
+        for (int j = 0; j < 8; j++)
+            if (i & (1<<j))
+                FILES[i] |= FILES[1<<j];
+        NOT_FILES[i] = ~FILES[i];
+    }
+
+    // rook masks
+    for (int i = 0; i < NUM_SQUARES; i++)
+        ROOK_MASKS[i] = gen_rook_moves(i, 0);
+
+    // bishop masks
+    for (int i = 0; i < NUM_SQUARES; i++)
+        BISHOP_MASKS[i] = gen_rook_moves(i, 0);
 }
 
+/* -------------------------------------------------------------------------- */
+/*                                   Strings                                  */
+/* -------------------------------------------------------------------------- */
 std::string chess_cpp::bb_to_string(U64 bitboard) {
     U64 mask = 1;
 
@@ -46,7 +143,10 @@ std::string chess_cpp::bb_to_string(U64 bitboard) {
     return ss.str();
 }
 
-U8 chess_cpp::calc_pos(int rank, int file) {
+/* -------------------------------------------------------------------------- */
+/*                            Rank/File to Position                           */
+/* -------------------------------------------------------------------------- */
+chess_cpp::U8 chess_cpp::calc_pos(int rank, int file) {
     return rank * 8 + file;
 }
 void chess_cpp::calc_rf(U8 pos, int &rank, int &file) {
@@ -58,15 +158,15 @@ void chess_cpp::calc_rf(U8 pos, int &rank, int &file) {
 /*                             Bitwise operations                             */
 /* -------------------------------------------------------------------------- */
 bool chess_cpp::is_set(const U64 &board, U8 pos) {
-    return board & set_bit_table[pos];
+    return board & SET_BIT_TABLE[pos];
 }
 void chess_cpp::set_pos(U64 &board, U8 pos) {
-    board |= set_bit_table[pos];
+    board |= SET_BIT_TABLE[pos];
 }
 void chess_cpp::clr_pos(U64 &board, U8 pos) {
-    board &= clr_bit_table[pos];
+    board &= CLEAR_BIT_TABLE[pos];
 }
-U8 chess_cpp::count_occupied(U64 board) {
+chess_cpp::U8 chess_cpp::count_occupied(U64 board) {
     U8 count = 0;
     while (board) {
         board &= board-1;
@@ -74,7 +174,7 @@ U8 chess_cpp::count_occupied(U64 board) {
     }
     return count;
 }
-U8 chess_cpp::pop_lsb(U64 &board) {
+chess_cpp::U8 chess_cpp::pop_lsb(U64 &board) {
     assert(board != 0);
     U64 b = board ^ (board - 1);
     unsigned int folded = (unsigned) ((b & 0xffffffff) ^ (b >> 32));

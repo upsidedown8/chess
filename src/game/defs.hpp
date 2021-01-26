@@ -1,18 +1,21 @@
-#if !defined(CHESS_GAME_DEFS_HPP)
+#ifndef CHESS_GAME_DEFS_HPP
 #define CHESS_GAME_DEFS_HPP
 
 #include <cstdint>
 #include <string>
 
-#define NUM_SQUARES     64
+#define NUM_SQUARES 64
 
 namespace chess_cpp {
 
-typedef uint8_t       U8;
-typedef uint16_t      U16;
-typedef uint64_t      U64;
+typedef uint8_t     U8;
+typedef uint16_t    U16;
+typedef uint64_t    U64;
 
-enum {
+/* -------------------------------------------------------------------------- */
+/*                                   Squares                                  */
+/* -------------------------------------------------------------------------- */
+enum Squares {
     a8, b8, c8, d8, e8, f8, g8, h8,
     a7, b7, c7, d7, e7, f7, g7, h7,
     a6, b6, c6, d6, e6, f6, g6, h6,
@@ -23,40 +26,71 @@ enum {
     a1, b1, c1, d1, e1, f1, g1, h1, not_on_board
 };
 
-const U64 FILES[] {
-    0x0101010101010101UL,
-    0x0202020202020202UL,
-    0x0404040404040404UL,
-    0x0808080808080808UL,
-    0x1010101010101010UL,
-    0x2020202020202020UL,
-    0x4040404040404040UL,
-    0x8080808080808080UL
+/* -------------------------------------------------------------------------- */
+/*                                   Tables                                   */
+/* -------------------------------------------------------------------------- */
+extern U64 RANKS[256];
+extern U64 FILES[256];
+extern U64 NOT_RANKS[256];
+extern U64 NOT_FILES[256];
+
+extern U64 ROOK_MASKS[NUM_SQUARES];
+extern U64 BISHOP_MASKS[NUM_SQUARES];
+
+/* -------------------------------------------------------------------------- */
+/*                                 Ranks/Files                                */
+/* -------------------------------------------------------------------------- */
+enum Ranks {
+    Rank1 = 0b00000001,
+    Rank2 = 0b00000010,
+    Rank3 = 0b00000100,
+    Rank4 = 0b00001000,
+    Rank5 = 0b00010000,
+    Rank6 = 0b00100000,
+    Rank7 = 0b01000000,
+    Rank8 = 0b10000000
 };
-const U64 RANKS[] {
-    0x00000000000000ffUL,
-    0x000000000000ff00UL,
-    0x0000000000ff0000UL,
-    0x00000000ff000000UL,
-    0x000000ff00000000UL,
-    0x0000ff0000000000UL,
-    0x00ff000000000000UL,
-    0xff00000000000000UL
+enum Files {
+    FileA = 0b00000001,
+    FileB = 0b00000010,
+    FileC = 0b00000100,
+    FileD = 0b00001000,
+    FileE = 0b00010000,
+    FileF = 0b00100000,
+    FileG = 0b01000000,
+    FileH = 0b10000000
 };
 
+/* -------------------------------------------------------------------------- */
+/*                                Colors/Pieces                               */
+/* -------------------------------------------------------------------------- */
 enum Pieces {
-    WP, WN, WB, WR, WQ, WK,
-    BP, BN, BB, BR, BQ, BK,
-    NO_PIECE
+    Pawn, Knight, Bishop, Rook, Queen, King, All, None
+};
+enum Colors {
+    White = 0b0000,
+    Black = 0b1000
 };
 
+/* -------------------------------------------------------------------------- */
+/*                            Initialize all tables                           */
+/* -------------------------------------------------------------------------- */
 void init();
 
+/* -------------------------------------------------------------------------- */
+/*                                   Strings                                  */
+/* -------------------------------------------------------------------------- */
 std::string bb_to_string(U64 bitboard);
 
+/* -------------------------------------------------------------------------- */
+/*                            Rank/File to Position                           */
+/* -------------------------------------------------------------------------- */
 U8 calc_pos(int rank, int file);
 void calc_rf(U8 pos, int &rank, int &file);
 
+/* -------------------------------------------------------------------------- */
+/*                             Bitwise operations                             */
+/* -------------------------------------------------------------------------- */
 bool is_set(const U64 &board, U8 pos);
 void set_pos(U64 &board, U8 pos);
 void clr_pos(U64 &board, U8 pos);

@@ -13,6 +13,6 @@ include_directories(
 add_executable(
 	chess
 	src/game/board.cpp
-	src/game/utils.cpp
+	src/game/defs.cpp
 	src/main.cpp
 )

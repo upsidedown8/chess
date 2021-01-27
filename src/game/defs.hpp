@@ -34,8 +34,17 @@ extern U64 FILES[256];
 extern U64 NOT_RANKS[256];
 extern U64 NOT_FILES[256];
 
+/* -------------------------------------------------------------------------- */
+/*                                   Magics                                   */
+/* -------------------------------------------------------------------------- */
 extern U64 ROOK_MASKS[NUM_SQUARES];
 extern U64 BISHOP_MASKS[NUM_SQUARES];
+
+extern U64 ROOK_MAGICS[NUM_SQUARES];
+extern U64 BISHOP_MAGICS[NUM_SQUARES];
+
+extern int ROOK_MAGIC_SHIFTS[NUM_SQUARES];
+extern int BISHOP_MAGIC_SHIFTS[NUM_SQUARES];
 
 /* -------------------------------------------------------------------------- */
 /*                                 Ranks/Files                                */

@@ -3,15 +3,45 @@
 #include <sstream>
 #include <assert.h>
 
+/* -------------------------------------------------------------------------- */
+/*                                   Tables                                   */
+/* -------------------------------------------------------------------------- */
 chess_cpp::U64 chess_cpp::RANKS[256];
 chess_cpp::U64 chess_cpp::FILES[256];
 chess_cpp::U64 chess_cpp::NOT_RANKS[256];
 chess_cpp::U64 chess_cpp::NOT_FILES[256];
 
+/* -------------------------------------------------------------------------- */
+/*                                   Magics                                   */
+/* -------------------------------------------------------------------------- */
 chess_cpp::U64 chess_cpp::ROOK_MASKS[NUM_SQUARES];
 chess_cpp::U64 chess_cpp::BISHOP_MASKS[NUM_SQUARES];
 
-const chess_cpp::U8 LSB_64_TABLE[64] {
+chess_cpp::U64 chess_cpp::ROOK_MAGICS[NUM_SQUARES];
+chess_cpp::U64 chess_cpp::BISHOP_MAGICS[NUM_SQUARES];
+
+int chess_cpp::ROOK_MAGIC_SHIFTS[NUM_SQUARES] {
+    12, 11, 11, 11, 11, 11, 11, 12,
+    11, 10, 10, 10, 10, 10, 10, 11,
+    11, 10, 10, 10, 10, 10, 10, 11,
+    11, 10, 10, 10, 10, 10, 10, 11,
+    11, 10, 10, 10, 10, 10, 10, 11,
+    11, 10, 10, 10, 10, 10, 10, 11,
+    11, 10, 10, 10, 10, 10, 10, 11,
+    12, 11, 11, 11, 11, 11, 11, 12
+};
+int chess_cpp::BISHOP_MAGIC_SHIFTS[NUM_SQUARES] {
+    6, 5, 5, 5, 5, 5, 5, 6,
+    5, 5, 5, 5, 5, 5, 5, 5,
+    5, 5, 7, 7, 7, 7, 5, 5,
+    5, 5, 7, 9, 9, 7, 5, 5,
+    5, 5, 7, 9, 9, 7, 5, 5,
+    5, 5, 7, 7, 7, 7, 5, 5,
+    5, 5, 5, 5, 5, 5, 5, 5,
+    6, 5, 5, 5, 5, 5, 5, 6
+};
+
+const chess_cpp::U8 LSB_64_TABLE[NUM_SQUARES] {
     63, 30,  3, 32, 25, 41, 22, 33,
     15, 50, 42, 13, 11, 53, 19, 34,
     61, 29,  2, 51, 21, 43, 45, 10,
@@ -29,6 +59,30 @@ chess_cpp::U64 CLEAR_BIT_TABLE[NUM_SQUARES];
 /* -------------------------------------------------------------------------- */
 /*                            Initialize all tables                           */
 /* -------------------------------------------------------------------------- */
+chess_cpp::U64 gen_rook_mask(int start) {
+    int rank, file;
+    chess_cpp::calc_rf(start, rank, file);
+    chess_cpp::U64 result = 0;
+
+    for (int r=rank-1; r>=1; r--) result |= (1ULL<<chess_cpp::calc_pos(r,file));
+    for (int r=rank+1; r<=6; r++) result |= (1ULL<<chess_cpp::calc_pos(r,file));
+    for (int f=file-1; f>=1; f--) result |= (1ULL<<chess_cpp::calc_pos(rank,f));
+    for (int f=file+1; f<=6; f++) result |= (1ULL<<chess_cpp::calc_pos(rank,f));
+
+    return result;
+}
+chess_cpp::U64 gen_bishop_mask(int start) {
+    int rank, file;
+    chess_cpp::calc_rf(start, rank, file);
+    chess_cpp::U64 result = 0;
+
+    for (int r=rank-1, f=file-1; r>=1&&f>=1; r--, f--) result |= (1ULL<<chess_cpp::calc_pos(r,f));
+    for (int r=rank+1, f=file-1; r<=6&&f>=1; r++, f--) result |= (1ULL<<chess_cpp::calc_pos(r,f));
+    for (int r=rank-1, f=file+1; r>=1&&f<=6; r--, f++) result |= (1ULL<<chess_cpp::calc_pos(r,f));
+    for (int r=rank+1, f=file+1; r<=6&&f<=6; r++, f++) result |= (1ULL<<chess_cpp::calc_pos(r,f));
+
+    return result;
+}
 chess_cpp::U64 gen_rook_moves(int start, chess_cpp::U64 occupancy) {
     int rank, file;
     chess_cpp::calc_rf(start, rank, file);
@@ -85,6 +139,36 @@ chess_cpp::U64 gen_bishop_moves(int start, chess_cpp::U64 occupancy) {
 
     return result;
 }
+chess_cpp::U64 random_u64() {
+    chess_cpp::U64 num1 = rand() & 0xffff;
+    chess_cpp::U64 num2 = rand() & 0xffff;
+    chess_cpp::U64 num3 = rand() & 0xffff;
+    chess_cpp::U64 num4 = rand() & 0xffff;
+    return
+       (num1      ) |
+       (num2 << 16) |
+       (num3 << 32) |
+       (num3 << 48);
+}
+chess_cpp::U64 idx_to_u64(int idx, chess_cpp::U64 mask) {
+    chess_cpp::U64 result = 0;
+
+    int i = 0;
+    while (idx&&mask) {
+        auto pos = chess_cpp::pop_lsb(mask);
+        if (idx & (1<<i))
+            result |= 1ULL << pos;
+        i++;
+    }
+
+    return result;
+}
+int get_magic_key(chess_cpp::U64 b, chess_cpp::U64 magic, int bits) {
+    return (int)((b * magic) >> (64 - bits));
+}
+chess_cpp::U64 find_magic(int start, bool isBishop) {
+
+}
 
 void chess_cpp::init() {
     // set bit table & clear bit table
@@ -115,11 +199,19 @@ void chess_cpp::init() {
 
     // rook masks
     for (int i = 0; i < NUM_SQUARES; i++)
-        ROOK_MASKS[i] = gen_rook_moves(i, 0);
+        ROOK_MASKS[i] = gen_rook_mask(i);
 
     // bishop masks
     for (int i = 0; i < NUM_SQUARES; i++)
-        BISHOP_MASKS[i] = gen_rook_moves(i, 0);
+        BISHOP_MASKS[i] = gen_bishop_mask(i);
+    
+    // rook magics
+    for (int i = 0; i < NUM_SQUARES; i++)
+        ROOK_MAGICS[i] = find_magic(i, false);
+
+    // bishop magics
+    for (int i = 0; i < NUM_SQUARES; i++)
+        BISHOP_MAGICS[i] = find_magic(i, true);
 }
 
 /* -------------------------------------------------------------------------- */

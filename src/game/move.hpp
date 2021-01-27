@@ -1,4 +1,4 @@
-#if !defined(CHESS_GAME_MOVE_HPP)
+#ifndef CHESS_GAME_MOVE_HPP
 #define CHESS_GAME_MOVE_HPP
 
 #include "defs.hpp"

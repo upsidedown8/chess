@@ -19,12 +19,14 @@ int main(int argc, char const *argv[]) {
     init();
 
     Board board;
-
-    U64 occupancy = 0;
-    for (U64 bb : board.bitboards) occupancy |= bb;
-
-    std::cout << bb_to_string(occupancy) << std::endl;
-    std::cout << bb_to_string(calc_bishop_moves(e4, occupancy)) << std::endl;
+    std::cout << board.to_string() << std::endl;
     
+    U8 flags = 0;
+    Move move(e2, e4, flags);
+
+    board.make_move(move);
+
+    std::cout << board.to_string() << std::endl;
+
     return 0;
 }

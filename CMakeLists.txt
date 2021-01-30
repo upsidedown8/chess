@@ -14,5 +14,6 @@ add_executable(
 	chess
 	src/game/board.cpp
 	src/game/defs.cpp
+	src/game/move.cpp
 	src/main.cpp
 )

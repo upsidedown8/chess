@@ -2,6 +2,7 @@
 #define CHESS_GAME_BOARD_HPP
 
 #include "defs.hpp"
+#include "move.hpp"
 #include <string>
 
 #define WHITE_CASTLE_QS 0b00010
@@ -15,7 +16,7 @@ class Board {
 private:
     void zero_boards();
     bool from_string(const std::string &str);
-
+    
 public:
     bool white_to_move;
     U8 castling;
@@ -23,12 +24,14 @@ public:
     U8 full_move_count;
     U8 en_passant;
 
+    int pieces[NUM_SQUARES];
     U64 bitboards[16];
 
     Board();
     Board(const std::string &str);
 
     void reset();
+    void make_move(Move &move);
 
     std::string to_fen();
     std::string to_string();

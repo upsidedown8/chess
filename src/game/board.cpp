@@ -14,6 +14,8 @@ void Board::zero_boards() {
     for (int color : {White, Black})
         for (int piece = Pawn; piece <= None; piece++)
             bitboards[color | piece] = 0ULL;
+    for (int i = 0; i < NUM_SQUARES; i++)
+        pieces[i] = None;
 }
 bool Board::from_string(const std::string &str) {
     zero_boards();
@@ -60,6 +62,7 @@ bool Board::from_string(const std::string &str) {
 
         if (piece != None) {
             bitboards[piece] |= 1ULL << (63-square);
+            pieces[square] = piece;
             square++;
         }
 
@@ -132,6 +135,40 @@ void Board::reset() {
     bool fen_success = from_string("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
     assert(fen_success);
 }
+void Board::make_move(Move &move) {
+    U8 start = move.get_start();
+    U8 end   = move.get_end();
+
+    assert(pieces[start] != None);
+    assert(start != end);
+    assert((pieces[start]&PIECE_COLOR) == (white_to_move?White:Black));
+    assert((pieces[end] == None) || pieces[start]&PIECE_COLOR != pieces[end]&PIECE_COLOR);
+
+    switch (move.value & MOVETYPE_FLAG) {
+        case MOVETYPE_ENPASSANT: {
+
+            break;
+        }
+        case MOVETYPE_CASTLE: {
+
+            break;
+        }
+        case MOVETYPE_PROMOTION: {
+
+            break;
+        }
+        // capture/simple
+        default: {
+            if (pieces[end] != None)
+                clr_pos(bitboards[pieces[end]], end);
+            clr_pos(bitboards[pieces[start]], start);
+            set_pos(bitboards[pieces[start]], end);
+            pieces[end] = pieces[start];
+            pieces[start] = None;
+            break;
+        }
+    }
+}
 
 std::string Board::to_fen() {
     std::stringstream ss;
@@ -180,25 +217,13 @@ std::string Board::to_fen() {
     return ss.str();
 }
 std::string Board::to_string() {
-    U64 mask = 1;
     std::stringstream ss;
+    int pos = 0;
     for (int i = 0; i < 8; i++) {
         ss << (8-i) << ' ';
         for (int j = 0; j < 8; j++) {
-            bool found = false;
-            for (int color : {White, Black}) {
-                for (int piece = Pawn; piece <= King; piece++) {
-                    if (bitboards[color | piece] & mask) {
-                        ss << get_notation(color | piece);
-                        found = true;
-                        break;
-                    }
-                }
-            }
-            if (!found)
-                ss << ' ';
-            ss << ' ';
-            mask <<= 1;
+            ss << (pieces[pos]==None?' ':get_notation(pieces[pos])) << ' ';
+            pos++;
         }
         ss << std::endl;
     }

@@ -1,7 +1,9 @@
 #include "defs.hpp"
 
-#include <sstream>
+#include <algorithm>
 #include <assert.h>
+#include <iostream>
+#include <sstream>
 
 /* -------------------------------------------------------------------------- */
 /*                                   Tables                                   */
@@ -17,29 +19,144 @@ chess_cpp::U64 chess_cpp::NOT_FILES[256];
 chess_cpp::U64 chess_cpp::ROOK_MASKS[NUM_SQUARES];
 chess_cpp::U64 chess_cpp::BISHOP_MASKS[NUM_SQUARES];
 
-chess_cpp::U64 chess_cpp::ROOK_MAGICS[NUM_SQUARES];
-chess_cpp::U64 chess_cpp::BISHOP_MAGICS[NUM_SQUARES];
+chess_cpp::U64 chess_cpp::ROOK_MAGICS[NUM_SQUARES] {
+    72075735983988992ULL,
+    162164771226042368ULL,
+    2774234964794286080ULL,
+    9295447227374240800ULL,
+    7133704077631881220ULL,
+    5404321769049293056ULL,
+    13871089051341160576ULL,
+    4647732546161868928ULL,
+    1154188151204364296ULL,
+    281623304421378ULL,
+    9585349132126560768ULL,
+    324399945019818112ULL,
+    1266654575591552ULL,
+    294422971669283848ULL,
+    9228016932324638976ULL,
+    422213622698112ULL,
+    18019346383143456ULL,
+    13519870926790656ULL,
+    6917743432679031040ULL,
+    4611968593184169992ULL,
+    12170978542791720968ULL,
+    144159173373870084ULL,
+    73228578216739328ULL,
+    2199036100765ULL,
+    56330731617533952ULL,
+    148619063654883328ULL,
+    4625232012420055168ULL,
+    14988261623278407680ULL,
+    1478588125675784194ULL,
+    577024260602875912ULL,
+    2468254118020653568ULL,
+    144256209032118404ULL,
+    40577751509369480ULL,
+    6917564213158219778ULL,
+    9007478444400656ULL,
+    20839044434890752ULL,
+    4611976300242928640ULL,
+    4617878489423415312ULL,
+    11278859869620225ULL,
+    288230653210657060ULL,
+    576531123197214720ULL,
+    844699816624161ULL,
+    4616198431329755136ULL,
+    1513221569692893216ULL,
+    12125942013883416584ULL,
+    4613005570896036100ULL,
+    72066394459734032ULL,
+    1765429764459462660ULL,
+    342291713626218624ULL,
+    22518273021051200ULL,
+    9464597434109056ULL,
+    613052534176650752ULL,
+    20547690614100224ULL,
+    140746078552192ULL,
+    45044801233552384ULL,
+    27028749086179840ULL,
+    290556685111457ULL,
+    288865903000617090ULL,
+    1161084417409045ULL,
+    289075918041778209ULL,
+    2522578810537804930ULL,
+    1298444514277720065ULL,
+    1143496522109444ULL,
+    2305843716071555138ULL
+};
+chess_cpp::U64 chess_cpp::BISHOP_MAGICS[NUM_SQUARES] {
+    1179020146311185ULL,
+    145267478427205635ULL,
+    4504158111531524ULL,
+    9224516499644878888ULL,
+    144680405855912002ULL,
+    4619005622497574912ULL,
+    1130315234418688ULL,
+    5349125176573952ULL,
+    6071010655858065920ULL,
+    20310248111767713ULL,
+    1297094009090539520ULL,
+    4616233778910625860ULL,
+    2305849615159678976ULL,
+    74381998193642242ULL,
+    1407684255942661ULL,
+    2305862803678299144ULL,
+    22535635693734016ULL,
+    4503608284938884ULL,
+    11259016393073153ULL,
+    108650578499878976ULL,
+    41095363813851170ULL,
+    9232520132522148096ULL,
+    70385943187776ULL,
+    9227035893351617024ULL,
+    1155182103739172867ULL,
+    11530343153862181120ULL,
+    2295791083930624ULL,
+    1130297991168512ULL,
+    281543712980996ULL,
+    307513611096490433ULL,
+    2289183226103316ULL,
+    4612816874811392128ULL,
+    4547891544985604ULL,
+    3458958372559659520ULL,
+    303473866573824ULL,
+    1729558217427519744ULL,
+    5633914760597520ULL,
+    1441434463836899328ULL,
+    20269028707403544ULL,
+    149744981853258752ULL,
+    2252933819802113ULL,
+    1163074498090533888ULL,
+    4681729134575680ULL,
+    4621485970984798208ULL,
+    367078571518203970ULL,
+    72621098075685120ULL,
+    1225544256278495744ULL,
+    1411779381045761ULL,
+    5333500077688291352ULL,
+    4716913491968128ULL,
+    148627764202701056ULL,
+    1688850967695425ULL,
+    17781710002178ULL,
+    9243644149415084036ULL,
+    218426849703891488ULL,
+    9009415596316677ULL,
+    1412882374067224ULL,
+    279186509824ULL,
+    20407489916899328ULL,
+    4614113755159331840ULL,
+    144119586390940160ULL,
+    11547234118442230016ULL,
+    5188151323463779840ULL,
+    435758450535334272ULL
+};
 
-int chess_cpp::ROOK_MAGIC_SHIFTS[NUM_SQUARES] {
-    12, 11, 11, 11, 11, 11, 11, 12,
-    11, 10, 10, 10, 10, 10, 10, 11,
-    11, 10, 10, 10, 10, 10, 10, 11,
-    11, 10, 10, 10, 10, 10, 10, 11,
-    11, 10, 10, 10, 10, 10, 10, 11,
-    11, 10, 10, 10, 10, 10, 10, 11,
-    11, 10, 10, 10, 10, 10, 10, 11,
-    12, 11, 11, 11, 11, 11, 11, 12
-};
-int chess_cpp::BISHOP_MAGIC_SHIFTS[NUM_SQUARES] {
-    6, 5, 5, 5, 5, 5, 5, 6,
-    5, 5, 5, 5, 5, 5, 5, 5,
-    5, 5, 7, 7, 7, 7, 5, 5,
-    5, 5, 7, 9, 9, 7, 5, 5,
-    5, 5, 7, 9, 9, 7, 5, 5,
-    5, 5, 7, 7, 7, 7, 5, 5,
-    5, 5, 5, 5, 5, 5, 5, 5,
-    6, 5, 5, 5, 5, 5, 5, 6
-};
+chess_cpp::U8 chess_cpp::ROOK_MAGIC_SHIFTS[NUM_SQUARES];
+chess_cpp::U8 chess_cpp::BISHOP_MAGIC_SHIFTS[NUM_SQUARES];
+
+chess_cpp::U64 chess_cpp::ROOK_MOVES[NUM_SQUARES][4096];
+chess_cpp::U64 chess_cpp::BISHOP_MOVES[NUM_SQUARES][4096];
 
 const chess_cpp::U8 LSB_64_TABLE[NUM_SQUARES] {
     63, 30,  3, 32, 25, 41, 22, 33,
@@ -140,34 +257,101 @@ chess_cpp::U64 gen_bishop_moves(int start, chess_cpp::U64 occupancy) {
     return result;
 }
 chess_cpp::U64 random_u64() {
-    chess_cpp::U64 num1 = rand() & 0xffff;
-    chess_cpp::U64 num2 = rand() & 0xffff;
-    chess_cpp::U64 num3 = rand() & 0xffff;
-    chess_cpp::U64 num4 = rand() & 0xffff;
     return
-       (num1      ) |
-       (num2 << 16) |
-       (num3 << 32) |
-       (num3 << 48);
+       ((rand() & 0xffffULL)      ) |
+       ((rand() & 0xffffULL) << 16) |
+       ((rand() & 0xffffULL) << 32) |
+       ((rand() & 0xffffULL) << 48);
 }
 chess_cpp::U64 idx_to_u64(int idx, chess_cpp::U64 mask) {
     chess_cpp::U64 result = 0;
 
     int i = 0;
+    chess_cpp::U8 pos;
     while (idx&&mask) {
-        auto pos = chess_cpp::pop_lsb(mask);
+        pos = chess_cpp::pop_lsb(mask);
         if (idx & (1<<i))
-            result |= 1ULL << pos;
+            result |= SET_BIT_TABLE[pos];
         i++;
     }
 
     return result;
 }
-int get_magic_key(chess_cpp::U64 b, chess_cpp::U64 magic, int bits) {
-    return (int)((b * magic) >> (64 - bits));
-}
-chess_cpp::U64 find_magic(int start, bool isBishop) {
 
+chess_cpp::U64 find_magic(int start, bool isBishop) {
+    // Credit: https://www.chessprogramming.org/Looking_for_Magics
+
+    chess_cpp::U64 moves[4096];
+    chess_cpp::U64 indexed_mask[4096];
+    chess_cpp::U64 mask = isBishop
+        ? chess_cpp::BISHOP_MASKS[start]
+        : chess_cpp::ROOK_MASKS[start];
+    int numBits = chess_cpp::count_occupied(mask);
+    int numPositions = 1<<numBits;
+    int shift = 64 - numBits;
+
+    // pregenerate the indexed masks and the moves
+    for (int idx = 0; idx < 4096; idx++) {
+        indexed_mask[idx] = idx_to_u64(idx, mask);
+        moves[idx] = isBishop
+            ? gen_bishop_moves(start, indexed_mask[idx])
+            : gen_rook_moves(start, indexed_mask[idx]);
+    }
+
+    // loop until a magic is found
+    chess_cpp::U64 moves_map[4096];
+    while (true) {
+        // reset the moves map
+        std::fill_n(moves_map, 4096, 0);
+
+        chess_cpp::U64 magic = random_u64() & random_u64() & random_u64();
+        if (chess_cpp::count_occupied((mask*magic)&chess_cpp::RANKS[chess_cpp::Rank1]) < numBits/2)
+            continue;
+
+        // verify the magic
+        bool verified = true;
+        for (int idx = 0; idx < 4096; idx++) {
+            int key = (indexed_mask[idx]*magic) >> shift;
+
+            // check for invalid collision
+            if (!moves_map[key]) {
+                moves_map[key] = moves[idx];
+            } else if (moves_map[key] != moves[idx]) {
+                verified = false;
+                break;
+            }
+        }
+
+        if (verified) return magic;
+    }
+}
+void find_all_magics() {
+    srand(time(NULL));
+
+    // rook magics
+    std::cout << "===============\n";
+    std::cout << "  Rook magics  \n";
+    std::cout << "===============\n";
+    std::cout << "chess_cpp::U64 rookMagics[NUM_SQUARES] = {\n";
+    for (int i = 0; i < NUM_SQUARES; i++) {
+        chess_cpp::ROOK_MAGICS[i] = find_magic(i, false);
+        std::cout << "    " << chess_cpp::ROOK_MAGICS[i] << "ULL";
+        if (i < 63) std::cout << ",";
+        std::cout << std::endl;
+    }
+    std::cout << "};\n";
+    // bishop magics
+    std::cout << "===============\n";
+    std::cout << " Bishop magics \n";
+    std::cout << "===============\n";
+    std::cout << "chess_cpp::U64 bishopMagics[NUM_SQUARES] = {\n";
+    for (int i = 0; i < NUM_SQUARES; i++) {
+        chess_cpp::BISHOP_MAGICS[i] = find_magic(i, true);
+        std::cout << "    " << chess_cpp::BISHOP_MAGICS[i] << "ULL";
+        if (i < 63) std::cout << ",";
+        std::cout << std::endl;
+    }
+    std::cout << "};\n";
 }
 
 void chess_cpp::init() {
@@ -205,13 +389,34 @@ void chess_cpp::init() {
     for (int i = 0; i < NUM_SQUARES; i++)
         BISHOP_MASKS[i] = gen_bishop_mask(i);
     
-    // rook magics
+    // rook magic shifts
     for (int i = 0; i < NUM_SQUARES; i++)
-        ROOK_MAGICS[i] = find_magic(i, false);
+        ROOK_MAGIC_SHIFTS[i] = 64 - count_occupied(ROOK_MASKS[i]);
 
-    // bishop magics
+    // bishop magic shifts
     for (int i = 0; i < NUM_SQUARES; i++)
-        BISHOP_MAGICS[i] = find_magic(i, true);
+        BISHOP_MAGIC_SHIFTS[i] = 64 - count_occupied(BISHOP_MASKS[i]);
+
+    // used to generate new magics
+    // find_all_magics();
+
+    for (int sq = 0; sq < NUM_SQUARES; sq++) {
+        // generate rook move tables
+        U64 rookMask = ROOK_MASKS[sq];
+        for (int idx = (1<<count_occupied(rookMask))-1; idx >= 0; idx--) {
+            U64 indexed_mask = idx_to_u64(idx, rookMask);
+            int key = (ROOK_MAGICS[sq]*indexed_mask) >> ROOK_MAGIC_SHIFTS[sq];
+            ROOK_MOVES[sq][key] = gen_rook_moves(sq, indexed_mask);
+        }
+
+        // generate bishop move tables
+        U64 bishopMask = BISHOP_MASKS[sq];
+        for (int idx = (1<<count_occupied(rookMask))-1; idx >= 0; idx--) {
+            U64 indexed_mask = idx_to_u64(idx, bishopMask);
+            int key = (BISHOP_MAGICS[sq]*indexed_mask) >> BISHOP_MAGIC_SHIFTS[sq];
+            BISHOP_MOVES[sq][key] = gen_bishop_moves(sq, indexed_mask);
+        }
+    }
 }
 
 /* -------------------------------------------------------------------------- */

@@ -43,8 +43,11 @@ extern U64 BISHOP_MASKS[NUM_SQUARES];
 extern U64 ROOK_MAGICS[NUM_SQUARES];
 extern U64 BISHOP_MAGICS[NUM_SQUARES];
 
-extern int ROOK_MAGIC_SHIFTS[NUM_SQUARES];
-extern int BISHOP_MAGIC_SHIFTS[NUM_SQUARES];
+extern U8  ROOK_MAGIC_SHIFTS[NUM_SQUARES];
+extern U8  BISHOP_MAGIC_SHIFTS[NUM_SQUARES];
+
+extern U64 ROOK_MOVES[NUM_SQUARES][4096];
+extern U64 BISHOP_MOVES[NUM_SQUARES][4096];
 
 /* -------------------------------------------------------------------------- */
 /*                                 Ranks/Files                                */

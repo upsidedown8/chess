@@ -33,6 +33,9 @@ public:
     void reset();
     void make_move(Move &move);
 
+    Colors active_color();
+    Colors enemy_color();
+
     std::string to_fen();
     std::string to_string();
 };

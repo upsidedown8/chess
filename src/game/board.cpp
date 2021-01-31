@@ -6,8 +6,8 @@
 using namespace chess_cpp;
 
 char get_notation(int piece) {
-    const std::string notation = "pnbrqkPNBRQK";
-    return notation[(piece & 0b111) + (piece&Black ? 6 : 0)];
+    const std::string notation = "PNBRQKpnbrqk";
+    return notation[(piece & 0b111) + (piece&PIECE_COLOR ? 6 : 0)];
 }
 
 void Board::zero_boards() {
@@ -61,7 +61,7 @@ bool Board::from_string(const std::string &str) {
         }
 
         if (piece != None) {
-            bitboards[piece] |= 1ULL << (63-square);
+            bitboards[piece] |= 1ULL << square;
             pieces[square] = piece;
             square++;
         }
@@ -120,6 +120,21 @@ bool Board::from_string(const std::string &str) {
     while (isdigit(str[pos]))
         full_move_count = full_move_count*10 + (str[pos++]-'0');
 
+    bitboards[White | All] = 
+        bitboards[White | Pawn] |
+        bitboards[White | Knight] |
+        bitboards[White | Bishop] |
+        bitboards[White | Rook] |
+        bitboards[White | Queen] |
+        bitboards[White | King];
+    bitboards[Black | All] = 
+        bitboards[Black | Pawn] |
+        bitboards[Black | Knight] |
+        bitboards[Black | Bishop] |
+        bitboards[Black | Rook] |
+        bitboards[Black | Queen] |
+        bitboards[Black | King];
+
     return true;
 }
 
@@ -142,32 +157,47 @@ void Board::make_move(Move &move) {
     assert(pieces[start] != None);
     assert(start != end);
     assert((pieces[start]&PIECE_COLOR) == (white_to_move?White:Black));
-    assert((pieces[end] == None) || pieces[start]&PIECE_COLOR != pieces[end]&PIECE_COLOR);
+    assert((pieces[end] == None) || ((pieces[start]&PIECE_COLOR) != (pieces[end]&PIECE_COLOR)));
 
     switch (move.value & MOVEFLAG_TYPE) {
         case MOVETYPE_ENPASSANT: {
             assert(en_passant != not_on_board);
-            set_pos(bitboards[pieces[start]], en_passant);
-            clr_pos(bitboards[pieces[start]], start);
+
             clr_pos(bitboards[pieces[end]], end);
-            pieces[en_passant] = start;
+            clr_pos(bitboards[pieces[start]], start);
+            set_pos(bitboards[pieces[start]], en_passant);
+            clr_pos(bitboards[(pieces[end  ]&PIECE_COLOR) | All], end);
+            clr_pos(bitboards[(pieces[start]&PIECE_COLOR) | All], start);
+            set_pos(bitboards[(pieces[start]&PIECE_COLOR) | All], en_passant);
+
+            pieces[en_passant] = pieces[start];
             pieces[start] = None;
             pieces[end] = None;
+
             en_passant = not_on_board;
+
             break;
         }
         case MOVETYPE_CASTLE: {
-            set_pos(bitboards[pieces[start]], end);
             clr_pos(bitboards[pieces[start]], start);
+            set_pos(bitboards[pieces[start]], end);
+            clr_pos(bitboards[(pieces[start]&PIECE_COLOR) | All], start);
+            set_pos(bitboards[(pieces[start]&PIECE_COLOR) | All], end);
+
             pieces[end] = pieces[start];
             pieces[start] = None;
+
             int offset = start - (start%8);
             switch (move.value&MOVEFLAG_PIECE) {
                 case MOVECASTLE_QS: {
                     assert(castling & (0b01<<(2*white_to_move)));
                     castling &= ~(0b01<<(2*white_to_move));
+
                     set_pos(bitboards[pieces[offset]], offset+3);
                     clr_pos(bitboards[pieces[offset]], offset);
+                    set_pos(bitboards[(pieces[start]&PIECE_COLOR) | All], offset+3);
+                    clr_pos(bitboards[(pieces[start]&PIECE_COLOR) | All], offset);
+
                     pieces[offset+3] = pieces[offset];
                     pieces[offset] = None;
                     break;
@@ -176,8 +206,12 @@ void Board::make_move(Move &move) {
                 default: {
                     assert(castling & (0b10<<(2*white_to_move)));
                     castling &= ~(0b10<<(2*white_to_move));
+
                     set_pos(bitboards[pieces[offset+7]], offset+5);
                     clr_pos(bitboards[pieces[offset+7]], offset+7);
+                    set_pos(bitboards[(pieces[start]&PIECE_COLOR) | All], offset+5);
+                    clr_pos(bitboards[(pieces[start]&PIECE_COLOR) | All], offset+7);
+
                     pieces[offset+5] = pieces[offset+7];
                     pieces[offset+7] = None;
                     break;
@@ -188,10 +222,16 @@ void Board::make_move(Move &move) {
         }
         case MOVETYPE_PROMOTION: {
             int promotionPiece = (pieces[start]&PIECE_COLOR) | (1+(move.value & MOVEFLAG_PIECE));
-            if (pieces[end] != None)
+            if (pieces[end] != None) {
                 clr_pos(bitboards[pieces[end]], end);
+                clr_pos(bitboards[(pieces[end]&PIECE_COLOR) | All], end);
+            }
+
             clr_pos(bitboards[pieces[start]], start);
             set_pos(bitboards[promotionPiece], end);
+            clr_pos(bitboards[(pieces[start]&PIECE_COLOR) | All], start);
+            set_pos(bitboards[(pieces[start]&PIECE_COLOR) | All], end);
+
             pieces[start] = None;
             pieces[end] = promotionPiece;
             en_passant = not_on_board;
@@ -204,10 +244,16 @@ void Board::make_move(Move &move) {
             else
                 en_passant = not_on_board;
             
-            if (pieces[end] != None)
+            if (pieces[end] != None) {
                 clr_pos(bitboards[pieces[end]], end);
+                clr_pos(bitboards[(pieces[end]&PIECE_COLOR) | All], end);
+            }
+
             clr_pos(bitboards[pieces[start]], start);
             set_pos(bitboards[pieces[start]], end);
+            clr_pos(bitboards[(pieces[start]&PIECE_COLOR) | All], start);
+            set_pos(bitboards[(pieces[start]&PIECE_COLOR) | All], end);
+
             pieces[end] = pieces[start];
             pieces[start] = None;
             break;
@@ -215,6 +261,13 @@ void Board::make_move(Move &move) {
     }
 
     white_to_move = !white_to_move;
+}
+
+Colors Board::active_color() {
+    return white_to_move ? White : Black;
+}
+Colors Board::enemy_color() {
+    return white_to_move ? Black : White;
 }
 
 std::string Board::to_fen() {
@@ -274,6 +327,7 @@ std::string Board::to_string() {
         }
         ss << std::endl;
     }
-    ss << "  a b c d e f g h";
+    ss << "  a b c d e f g h" << std::endl;
+    ss << (white_to_move ? "White" : "Black") << " to move";
     return ss.str();
 }

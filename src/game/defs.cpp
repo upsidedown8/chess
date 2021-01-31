@@ -14,6 +14,12 @@ chess_cpp::U64 chess_cpp::NOT_RANKS[256];
 chess_cpp::U64 chess_cpp::NOT_FILES[256];
 
 /* -------------------------------------------------------------------------- */
+/*                                Attack tables                               */
+/* -------------------------------------------------------------------------- */
+chess_cpp::U64 chess_cpp::KNIGHT_MOVES[64];
+chess_cpp::U64 chess_cpp::KING_MOVES[64];
+
+/* -------------------------------------------------------------------------- */
 /*                                   Magics                                   */
 /* -------------------------------------------------------------------------- */
 chess_cpp::U64 chess_cpp::ROOK_MASKS[NUM_SQUARES];
@@ -354,6 +360,49 @@ void find_all_magics() {
     std::cout << "};\n";
 }
 
+chess_cpp::U64 gen_king_moves(int start) {
+    chess_cpp::U64 result = 0;
+    int rank, file;
+    chess_cpp::calc_rf(start, rank, file);
+    for (int dx = -1; dx <= 1; dx++) {
+        for (int dy = -1; dy <= 1; dy++) {
+            if ((dx != 0 || dy != 0) &&
+                rank+dx >= 0 && rank+dx <= 7 &&
+                file+dy >= 0 && file+dy <= 7) {
+
+                chess_cpp::set_pos(result, chess_cpp::calc_pos(rank+dx, file+dy));
+            }
+        }
+    }
+    return result;
+}
+chess_cpp::U64 gen_knight_moves(int start) {
+    chess_cpp::U64 result = 0;
+    int rank, file;
+    chess_cpp::calc_rf(start, rank, file);
+    int moveVectors[8][2] {
+        { -1,  2 },
+        { -2,  1 },
+        {  1,  2 },
+        {  2,  1 },
+        { -1, -2 },
+        { -2, -1 },
+        {  1, -2 },
+        {  2, -1 }
+    };
+    for (int i = 0; i < 8; i++) {
+        int dx = moveVectors[i][0];
+        int dy = moveVectors[i][1];
+        if ((dx != 0 || dy != 0) &&
+            rank+dx >= 0 && rank+dx <= 7 &&
+            file+dy >= 0 && file+dy <= 7) {
+
+            chess_cpp::set_pos(result, chess_cpp::calc_pos(rank+dx, file+dy));
+        }
+    }
+    return result;
+}
+
 void chess_cpp::init() {
     // set bit table & clear bit table
     for (size_t i = 0; i < NUM_SQUARES; i++) {
@@ -417,6 +466,15 @@ void chess_cpp::init() {
             BISHOP_MOVES[sq][key] = gen_bishop_moves(sq, indexed_mask);
         }
     }
+
+    // generate knight moves
+    for (int sq = 0; sq < NUM_SQUARES; sq++)
+        KNIGHT_MOVES[sq] = gen_knight_moves(sq);
+
+    // generate king moves
+    for (int sq = 0; sq < NUM_SQUARES; sq++)
+        KING_MOVES[sq] = gen_king_moves(sq);
+
 }
 
 /* -------------------------------------------------------------------------- */

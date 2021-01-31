@@ -7,10 +7,10 @@ Move::Move(int start, int end, U8 flags) {
 }
 
 U8 Move::get_start() {
-    return (value & MOVESTART_FLAG)>>4;
+    return (value & MOVEFLAG_START)>>4;
 }
 U8 Move::get_end() {
-    return (value & MOVEEND_FLAG)>>10;
+    return (value & MOVEFLAG_END)>>10;
 }
 
 std::string Move::to_string() {

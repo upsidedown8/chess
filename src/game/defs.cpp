@@ -502,11 +502,11 @@ std::string chess_cpp::bb_to_string(U64 bitboard) {
 /*                            Rank/File to Position                           */
 /* -------------------------------------------------------------------------- */
 chess_cpp::U8 chess_cpp::calc_pos(int rank, int file) {
-    return rank * 8 + file;
+    return (7-rank) * 8 + file;
 }
 void chess_cpp::calc_rf(U8 pos, int &rank, int &file) {
     file = pos % 8;
-    rank = pos / 8;
+    rank = 7-(pos / 8);
 }
 
 /* -------------------------------------------------------------------------- */

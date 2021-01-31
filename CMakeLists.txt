@@ -15,5 +15,6 @@ add_executable(
 	src/game/board.cpp
 	src/game/defs.cpp
 	src/game/move.cpp
+	src/game/movegen.cpp
 	src/main.cpp
 )

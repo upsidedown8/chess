@@ -144,21 +144,62 @@ void Board::make_move(Move &move) {
     assert((pieces[start]&PIECE_COLOR) == (white_to_move?White:Black));
     assert((pieces[end] == None) || pieces[start]&PIECE_COLOR != pieces[end]&PIECE_COLOR);
 
-    switch (move.value & MOVETYPE_FLAG) {
+    switch (move.value & MOVEFLAG_TYPE) {
         case MOVETYPE_ENPASSANT: {
-
+            assert(en_passant != not_on_board);
+            set_pos(bitboards[pieces[start]], en_passant);
+            clr_pos(bitboards[pieces[start]], start);
+            clr_pos(bitboards[pieces[end]], end);
+            pieces[en_passant] = start;
+            pieces[start] = None;
+            pieces[end] = None;
+            en_passant = not_on_board;
             break;
         }
         case MOVETYPE_CASTLE: {
-
+            set_pos(bitboards[pieces[start]], end);
+            clr_pos(bitboards[pieces[start]], start);
+            pieces[end] = pieces[start];
+            pieces[start] = None;
+            int offset = start - (start%8);
+            switch (move.value&MOVEFLAG_PIECE) {
+                case MOVECASTLE_KS: {
+                    set_pos(bitboards[pieces[offset+7]], offset+5);
+                    clr_pos(bitboards[pieces[offset+7]], offset+7);
+                    pieces[offset+5] = pieces[offset+7];
+                    pieces[offset+7] = None;
+                    break;
+                }
+                case MOVECASTLE_QS:
+                default: {
+                    set_pos(bitboards[pieces[offset]], offset+3);
+                    clr_pos(bitboards[pieces[offset]], offset);
+                    pieces[offset+3] = pieces[offset];
+                    pieces[offset] = None;
+                    break;
+                }
+            }
+            en_passant = not_on_board;
             break;
         }
         case MOVETYPE_PROMOTION: {
-
+            int promotionPiece = (pieces[start]&PIECE_COLOR) | (1+(move.value & MOVEFLAG_PIECE));
+            if (pieces[end] != None)
+                clr_pos(bitboards[pieces[end]], end);
+            clr_pos(bitboards[pieces[start]], start);
+            set_pos(bitboards[promotionPiece], end);
+            pieces[start] = None;
+            pieces[end] = promotionPiece;
+            en_passant = not_on_board;
             break;
         }
         // capture/simple
         default: {
+            if ((pieces[start]&0b111) == Pawn && abs(end-start) == 16)
+                en_passant = (start+end)>>1;
+            else
+                en_passant = not_on_board;
+            
             if (pieces[end] != None)
                 clr_pos(bitboards[pieces[end]], end);
             clr_pos(bitboards[pieces[start]], start);
@@ -168,6 +209,8 @@ void Board::make_move(Move &move) {
             break;
         }
     }
+
+    white_to_move = !white_to_move;
 }
 
 std::string Board::to_fen() {

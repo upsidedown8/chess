@@ -17,10 +17,14 @@ std::string Move::to_string() {
     std::string result(4, '\0');
     int r, f;
     calc_rf(get_start(), r, f);
-    result[0] = 'a'+r;
-    result[1] = '0'+f;
+    result[0] = 'a'+f;
+    result[1] = '1'+r;
     calc_rf(get_end(), r, f);
-    result[2] = 'a'+r;
-    result[3] = '0'+f;
+    result[2] = 'a'+f;
+    if ((value & MOVEFLAG_TYPE) == MOVETYPE_ENPASSANT) {
+        result[3] = '1'+(r==3?2:5);
+    } else {
+        result[3] = '1'+r;
+    }
     return result;
 }

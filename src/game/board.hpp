@@ -5,10 +5,10 @@
 #include "move.hpp"
 #include <string>
 
-#define WHITE_CASTLE_QS 0b00010
-#define WHITE_CASTLE_KS 0b00100
-#define BLACK_CASTLE_QS 0b01000
-#define BLACK_CASTLE_KS 0b10000
+#define BLACK_CASTLE_QS 0b0001
+#define BLACK_CASTLE_KS 0b0010
+#define WHITE_CASTLE_QS 0b0100
+#define WHITE_CASTLE_KS 0b1000
 
 namespace chess_cpp {
 

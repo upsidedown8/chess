@@ -163,19 +163,23 @@ void Board::make_move(Move &move) {
             pieces[start] = None;
             int offset = start - (start%8);
             switch (move.value&MOVEFLAG_PIECE) {
-                case MOVECASTLE_KS: {
-                    set_pos(bitboards[pieces[offset+7]], offset+5);
-                    clr_pos(bitboards[pieces[offset+7]], offset+7);
-                    pieces[offset+5] = pieces[offset+7];
-                    pieces[offset+7] = None;
-                    break;
-                }
-                case MOVECASTLE_QS:
-                default: {
+                case MOVECASTLE_QS: {
+                    assert(castling & (0b01<<(2*white_to_move)));
+                    castling &= ~(0b01<<(2*white_to_move));
                     set_pos(bitboards[pieces[offset]], offset+3);
                     clr_pos(bitboards[pieces[offset]], offset);
                     pieces[offset+3] = pieces[offset];
                     pieces[offset] = None;
+                    break;
+                }
+                case MOVECASTLE_KS:
+                default: {
+                    assert(castling & (0b10<<(2*white_to_move)));
+                    castling &= ~(0b10<<(2*white_to_move));
+                    set_pos(bitboards[pieces[offset+7]], offset+5);
+                    clr_pos(bitboards[pieces[offset+7]], offset+7);
+                    pieces[offset+5] = pieces[offset+7];
+                    pieces[offset+7] = None;
                     break;
                 }
             }

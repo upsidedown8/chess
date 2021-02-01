@@ -2,6 +2,8 @@
 
 using namespace chess_cpp;
 
+Move::Move()
+    : value(0) {}
 Move::Move(int start, int end, U8 flags) {
     value = (end<<10) | (start<<4) | flags;
 }
@@ -25,6 +27,9 @@ std::string Move::to_string() {
         result[3] = '1'+(r==3?2:5);
     } else {
         result[3] = '1'+r;
+    }
+    if ((value & MOVEFLAG_TYPE) == MOVETYPE_PROMOTION) {
+        result += "NBRQ"[value & MOVEFLAG_PIECE];
     }
     return result;
 }

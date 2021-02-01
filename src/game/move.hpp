@@ -35,6 +35,7 @@ class Move {
 public:
     U16 value;
 
+    Move();
     Move(int start, int end, U8 flags);
 
     U8 get_start();

@@ -16,8 +16,10 @@ chess_cpp::U64 chess_cpp::NOT_FILES[256];
 /* -------------------------------------------------------------------------- */
 /*                                Attack tables                               */
 /* -------------------------------------------------------------------------- */
-chess_cpp::U64 chess_cpp::KNIGHT_MOVES[64];
-chess_cpp::U64 chess_cpp::KING_MOVES[64];
+chess_cpp::U64 chess_cpp::KNIGHT_MOVES[NUM_SQUARES];
+chess_cpp::U64 chess_cpp::KING_MOVES[NUM_SQUARES];
+
+chess_cpp::U64 chess_cpp::PAWN_ATTACKS[2][NUM_SQUARES];
 
 /* -------------------------------------------------------------------------- */
 /*                                   Magics                                   */
@@ -475,6 +477,23 @@ void chess_cpp::init() {
     for (int sq = 0; sq < NUM_SQUARES; sq++)
         KING_MOVES[sq] = gen_king_moves(sq);
 
+    // generate pawn attacks
+    U64 attacks;
+    for (int rank = 0; rank < 8; rank++) {
+        for (int file = 0; file < 8; file++) {
+            int pos = calc_pos(rank, file);
+            
+            attacks = 0ULL;
+            if (file != 7) set_pos(attacks, pos-7);
+            if (file != 0) set_pos(attacks, pos-9);
+            PAWN_ATTACKS[WHITE][pos] = attacks;
+
+            attacks = 0ULL;
+            if (file != 7) set_pos(attacks, pos+9);
+            if (file != 0) set_pos(attacks, pos+7);
+            PAWN_ATTACKS[BLACK][pos] = attacks;
+        }
+    }
 }
 
 /* -------------------------------------------------------------------------- */

@@ -41,8 +41,14 @@ extern U64 NOT_FILES[256];
 /* -------------------------------------------------------------------------- */
 /*                                Attack tables                               */
 /* -------------------------------------------------------------------------- */
-extern U64 KNIGHT_MOVES[64];
-extern U64 KING_MOVES[64];
+extern U64 KNIGHT_MOVES[NUM_SQUARES];
+extern U64 KING_MOVES[NUM_SQUARES];
+
+#define WHITE 0
+#define BLACK 1
+
+// the (max) two possible pawns that could be attacking a square
+extern U64 PAWN_ATTACKS[2][NUM_SQUARES];
 
 /* -------------------------------------------------------------------------- */
 /*                                   Magics                                   */

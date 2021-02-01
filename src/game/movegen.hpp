@@ -9,10 +9,20 @@
 
 namespace chess_cpp {
 
+struct MoveList {
+    Move moves[256];
+    Move *ptr;
+    U64 attacks;
+
+    MoveList();
+
+    size_t size();
+};
+
 /* -------------------------------------------------------------------------- */
 /*                               Move generation                              */
 /* -------------------------------------------------------------------------- */
-U64 gen_moves(Board &board, std::vector<Move> &moves);
+MoveList gen_moves(Board &board, U64 enemyAttacks);
 
 }
 

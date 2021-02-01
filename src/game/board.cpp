@@ -1,4 +1,4 @@
-#include "game/board.hpp"
+#include "board.hpp"
 
 #include <assert.h>
 #include <sstream>
@@ -230,7 +230,6 @@ void Board::make_move(Move &move) {
             clr_pos(bitboards[pieces[start]], start);
             set_pos(bitboards[promotionPiece], end);
             clr_pos(bitboards[(pieces[start]&PIECE_COLOR) | All], start);
-            set_pos(bitboards[(pieces[start]&PIECE_COLOR) | All], end);
 
             pieces[start] = None;
             pieces[end] = promotionPiece;

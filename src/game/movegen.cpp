@@ -2,6 +2,19 @@
 
 using namespace chess_cpp;
 
+/* -------------------------------------------------------------------------- */
+/*                                  MoveList                                  */
+/* -------------------------------------------------------------------------- */
+MoveList::MoveList()
+    : ptr(moves) {}
+
+size_t MoveList::size() {
+    return ptr - moves;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                               Move Generation                              */
+/* -------------------------------------------------------------------------- */
 inline U64 get_bishop_moves(int sq, U64 occupancy) {
     occupancy &= BISHOP_MASKS[sq];
     int idx = (BISHOP_MAGICS[sq]*occupancy)>>BISHOP_MAGIC_SHIFTS[sq];
@@ -13,7 +26,7 @@ inline U64 get_rook_moves(int sq, U64 occupancy) {
     return ROOK_MOVES[sq][idx];
 }
 
-U64 gen_pawn_moves(Board &board, std::vector<Move> &moves, U64 occupancy) {
+U64 gen_pawn_moves(Board &board, Move *&ptr, U64 occupancy, U64 enemyAttacks) {
     U64 attacks = 0ULL;
     U64 enemy = board.bitboards[board.enemy_color() | All];
     U64 friendly = board.bitboards[board.active_color() | All];
@@ -37,7 +50,7 @@ U64 gen_pawn_moves(Board &board, std::vector<Move> &moves, U64 occupancy) {
     U64 nonPromotionMoves = pawnSingleMoves & NOT_RANKS[board.white_to_move ? Rank8 : Rank1];
     while (nonPromotionMoves) {
         end = pop_lsb(nonPromotionMoves);
-        moves.push_back(Move(offset+end, end, 0));
+        *(ptr++) = Move(offset+end, end, 0);
     }
 
     // Promotion moves
@@ -45,10 +58,10 @@ U64 gen_pawn_moves(Board &board, std::vector<Move> &moves, U64 occupancy) {
     U64 promotionMoves = pawnSingleMoves & RANKS[board.white_to_move ? Rank8 : Rank1];
     while (promotionMoves) {
         end = pop_lsb(promotionMoves);
-        moves.push_back(Move(offset+end, end, MOVETYPE_PROMOTION | MOVEPROMOTION_PAWN));
-        moves.push_back(Move(offset+end, end, MOVETYPE_PROMOTION | MOVEPROMOTION_KNIGHT));
-        moves.push_back(Move(offset+end, end, MOVETYPE_PROMOTION | MOVEPROMOTION_BISHOP));
-        moves.push_back(Move(offset+end, end, MOVETYPE_PROMOTION | MOVEPROMOTION_QUEEN));
+        *(ptr++) = Move(offset+end, end, MOVETYPE_PROMOTION | MOVEPROMOTION_PAWN);
+        *(ptr++) = Move(offset+end, end, MOVETYPE_PROMOTION | MOVEPROMOTION_KNIGHT);
+        *(ptr++) = Move(offset+end, end, MOVETYPE_PROMOTION | MOVEPROMOTION_BISHOP);
+        *(ptr++) = Move(offset+end, end, MOVETYPE_PROMOTION | MOVEPROMOTION_QUEEN);
     }
 
     // Double square moves
@@ -61,7 +74,7 @@ U64 gen_pawn_moves(Board &board, std::vector<Move> &moves, U64 occupancy) {
     pawnDoubleMoves &= ~occupancy;
     while (pawnDoubleMoves) {
         end = pop_lsb(pawnDoubleMoves);
-        moves.push_back(Move(doubleOffset+end, end, 0));
+        *(ptr++) = Move(doubleOffset+end, end, 0);
     }
 
     // Captures
@@ -79,7 +92,7 @@ U64 gen_pawn_moves(Board &board, std::vector<Move> &moves, U64 occupancy) {
     // Check for left capture En Passant
     enPassantCaptures = captures & enPassantSquare;
     if (enPassantCaptures) {
-        moves.push_back(Move(offset+board.en_passant, enPassantEnd, MOVETYPE_ENPASSANT));
+        *(ptr++) = Move(offset+board.en_passant, enPassantEnd, MOVETYPE_ENPASSANT);
     }
     captures &= enemy;
     attacks |= captures;
@@ -87,16 +100,16 @@ U64 gen_pawn_moves(Board &board, std::vector<Move> &moves, U64 occupancy) {
     nonPromotionCaps = captures & NOT_RANKS[board.white_to_move ? Rank8 : Rank1];
     while (nonPromotionCaps) {
         end = pop_lsb(nonPromotionCaps);
-        moves.push_back(Move(end+offset, end, 0));
+        *(ptr++) = Move(end+offset, end, 0);
     }
     // Promotion captures
     promotionCaps = captures & RANKS[board.white_to_move ? Rank8 : Rank1];
     while (promotionCaps) {
         end = pop_lsb(promotionCaps);
-        moves.push_back(Move(offset+end, end, MOVETYPE_PROMOTION | MOVEPROMOTION_PAWN));
-        moves.push_back(Move(offset+end, end, MOVETYPE_PROMOTION | MOVEPROMOTION_KNIGHT));
-        moves.push_back(Move(offset+end, end, MOVETYPE_PROMOTION | MOVEPROMOTION_BISHOP));
-        moves.push_back(Move(offset+end, end, MOVETYPE_PROMOTION | MOVEPROMOTION_QUEEN));
+        *(ptr++) = Move(offset+end, end, MOVETYPE_PROMOTION | MOVEPROMOTION_PAWN);
+        *(ptr++) = Move(offset+end, end, MOVETYPE_PROMOTION | MOVEPROMOTION_KNIGHT);
+        *(ptr++) = Move(offset+end, end, MOVETYPE_PROMOTION | MOVEPROMOTION_BISHOP);
+        *(ptr++) = Move(offset+end, end, MOVETYPE_PROMOTION | MOVEPROMOTION_QUEEN);
     }
 
     // any pawn not on file H could potentially right capture
@@ -109,28 +122,28 @@ U64 gen_pawn_moves(Board &board, std::vector<Move> &moves, U64 occupancy) {
     // Check for right capture En Passant
     enPassantCaptures = captures & enPassantSquare;
     if (enPassantCaptures) {
-        moves.push_back(Move(offset+board.en_passant, enPassantEnd, MOVETYPE_ENPASSANT));
+        *(ptr++) = Move(offset+board.en_passant, enPassantEnd, MOVETYPE_ENPASSANT);
     }
     captures &= enemy;
     // Non-Promotion captures
     nonPromotionCaps = captures & NOT_RANKS[board.white_to_move ? Rank8 : Rank1];
     while (nonPromotionCaps) {
         end = pop_lsb(nonPromotionCaps);
-        moves.push_back(Move(end+offset, end, 0));
+        *(ptr++) = Move(end+offset, end, 0);
     }
     // Promotion Captures
     promotionCaps = captures & RANKS[board.white_to_move ? Rank8 : Rank1];
     while (promotionCaps) {
         end = pop_lsb(promotionCaps);
-        moves.push_back(Move(offset+end, end, MOVETYPE_PROMOTION | MOVEPROMOTION_PAWN));
-        moves.push_back(Move(offset+end, end, MOVETYPE_PROMOTION | MOVEPROMOTION_KNIGHT));
-        moves.push_back(Move(offset+end, end, MOVETYPE_PROMOTION | MOVEPROMOTION_BISHOP));
-        moves.push_back(Move(offset+end, end, MOVETYPE_PROMOTION | MOVEPROMOTION_QUEEN));
+        *(ptr++) = Move(offset+end, end, MOVETYPE_PROMOTION | MOVEPROMOTION_PAWN);
+        *(ptr++) = Move(offset+end, end, MOVETYPE_PROMOTION | MOVEPROMOTION_KNIGHT);
+        *(ptr++) = Move(offset+end, end, MOVETYPE_PROMOTION | MOVEPROMOTION_BISHOP);
+        *(ptr++) = Move(offset+end, end, MOVETYPE_PROMOTION | MOVEPROMOTION_QUEEN);
     }
 
     return attacks;
 }
-U64 gen_knight_moves(Board &board, std::vector<Move> &moves, U64 occupancy) {
+U64 gen_knight_moves(Board &board, Move *&ptr, U64 occupancy, U64 enemyAttacks) {
     U64 attacks = 0ULL;
     U64 friendly = board.bitboards[board.active_color() | All];
     U64 knights = board.bitboards[board.active_color() | Knight];
@@ -143,12 +156,12 @@ U64 gen_knight_moves(Board &board, std::vector<Move> &moves, U64 occupancy) {
 
         while (knightsMoves) {
             end = pop_lsb(knightsMoves);
-            moves.push_back(Move(start, end, 0));
+            *(ptr++) = Move(start, end, 0);
         }
     }
     return attacks;
 }
-U64 gen_bishop_moves(Board &board, std::vector<Move> &moves, U64 occupancy) {
+U64 gen_bishop_moves(Board &board, Move *&ptr, U64 occupancy, U64 enemyAttacks) {
     U64 attacks = 0ULL;
     U64 friendly = board.bitboards[board.active_color() | All];
     U64 bishops = board.bitboards[board.active_color() | Bishop];
@@ -161,12 +174,12 @@ U64 gen_bishop_moves(Board &board, std::vector<Move> &moves, U64 occupancy) {
 
         while (bishopMoves) {
             end = pop_lsb(bishopMoves);
-            moves.push_back(Move(start, end, 0));
+            *(ptr++) = Move(start, end, 0);
         }
     }
     return attacks;
 }
-U64 gen_rook_moves(Board &board, std::vector<Move> &moves, U64 occupancy) {
+U64 gen_rook_moves(Board &board, Move *&ptr, U64 occupancy, U64 enemyAttacks) {
     U64 attacks = 0ULL;
     U64 friendly = board.bitboards[board.active_color() | All];
     U64 rooks = board.bitboards[board.active_color() | Rook];
@@ -179,12 +192,12 @@ U64 gen_rook_moves(Board &board, std::vector<Move> &moves, U64 occupancy) {
 
         while (rooksMoves) {
             end = pop_lsb(rooksMoves);
-            moves.push_back(Move(start, end, 0));
+            *(ptr++) = Move(start, end, 0);
         }
     }
     return attacks;
 }
-U64 gen_queen_moves(Board &board, std::vector<Move> &moves, U64 occupancy) {
+U64 gen_queen_moves(Board &board, Move *&ptr, U64 occupancy, U64 enemyAttacks) {
     U64 attacks = 0ULL;
     U64 friendly = board.bitboards[board.active_color() | All];
     U64 queens = board.bitboards[board.active_color() | Queen];
@@ -200,12 +213,12 @@ U64 gen_queen_moves(Board &board, std::vector<Move> &moves, U64 occupancy) {
 
         while (queenMoves) {
             end = pop_lsb(queenMoves);
-            moves.push_back(Move(start, end, 0));
+            *(ptr++) = Move(start, end, 0);
         }
     }
     return attacks;
 }
-U64 gen_king_moves(Board &board, std::vector<Move> &moves) {
+U64 gen_king_moves(Board &board, Move *&ptr, U64 enemyAttacks) {
     U64 attacks = 0ULL;
     U64 friendly = board.bitboards[board.active_color() | All];
     U64 kings = board.bitboards[board.active_color() | King];
@@ -218,33 +231,38 @@ U64 gen_king_moves(Board &board, std::vector<Move> &moves) {
 
         while (kingMoves) {
             end = pop_lsb(kingMoves);
-            moves.push_back(Move(start, end, 0));
+            *(ptr++) = Move(start, end, 0);
         }
     }
     return attacks;
 }
-U64 gen_castling(Board &board, std::vector<Move> &moves, U64 occupancy) {
-    if (board.white_to_move) {
-        if (board.castling & WHITE_CASTLE_QS) {
-            if (!(occupancy & RANKS[Rank1] & FILES[FileB | FileC | FileD])) {
-                moves.push_back(Move(e1, c1, MOVETYPE_CASTLE | MOVECASTLE_QS));
+U64 gen_castling(Board &board, Move *&ptr, U64 occupancy, U64 enemyAttacks) {
+    // check that the king is not under attack
+    if (!(board.bitboards[board.active_color() | King] & enemyAttacks)) {
+        // a square is blocked if it has a piece on it or is under attack
+        U64 blocked = occupancy | enemyAttacks;
+        if (board.white_to_move) {
+            if (board.castling & WHITE_CASTLE_QS) {
+                if (!(blocked & RANKS[Rank1] & FILES[FileB | FileC | FileD])) {
+                    *(ptr++) = Move(e1, c1, MOVETYPE_CASTLE | MOVECASTLE_QS);
+                }
+            }
+            if (board.castling & WHITE_CASTLE_KS) {
+                if (!(blocked & RANKS[Rank1] & FILES[FileF | FileG])) {
+                    *(ptr++) = Move(e1, g1, MOVETYPE_CASTLE | MOVECASTLE_KS);
+                }
             }
         }
-        if (board.castling & WHITE_CASTLE_KS) {
-            if (!(occupancy & RANKS[Rank1] & FILES[FileF | FileG])) {
-                moves.push_back(Move(e1, g1, MOVETYPE_CASTLE | MOVECASTLE_KS));
+        else {
+            if (board.castling & BLACK_CASTLE_QS) {
+                if (!(blocked & RANKS[Rank8] & FILES[FileB | FileC | FileD])) {
+                    *(ptr++) = Move(e8, c8, MOVETYPE_CASTLE | MOVECASTLE_QS);
+                }
             }
-        }
-    }
-    else {
-        if (board.castling & BLACK_CASTLE_QS) {
-            if (!(occupancy & RANKS[Rank8] & FILES[FileB | FileC | FileD])) {
-                moves.push_back(Move(e8, c8, MOVETYPE_CASTLE | MOVECASTLE_QS));
-            }
-        }
-        if (board.castling & BLACK_CASTLE_KS) {
-            if (!(occupancy & RANKS[Rank8] & FILES[FileF | FileG])) {
-                moves.push_back(Move(e8, g8, MOVETYPE_CASTLE | MOVECASTLE_KS));
+            if (board.castling & BLACK_CASTLE_KS) {
+                if (!(blocked & RANKS[Rank8] & FILES[FileF | FileG])) {
+                    *(ptr++) = Move(e8, g8, MOVETYPE_CASTLE | MOVECASTLE_KS);
+                }
             }
         }
     }
@@ -252,17 +270,20 @@ U64 gen_castling(Board &board, std::vector<Move> &moves, U64 occupancy) {
     return 0ULL;
 }
 
-U64 chess_cpp::gen_moves(Board &board, std::vector<Move> &moves) {
+MoveList chess_cpp::gen_moves(Board &board, U64 enemyAttacks) {
     U64 occupancy = board.bitboards[White | All] | board.bitboards[Black | All];
     U64 attacks = 0ULL;
 
-    attacks |= gen_pawn_moves(board, moves, occupancy);
-    attacks |= gen_knight_moves(board, moves, occupancy);
-    attacks |= gen_bishop_moves(board, moves, occupancy);
-    attacks |= gen_rook_moves(board, moves, occupancy);
-    attacks |= gen_queen_moves(board, moves, occupancy);
-    attacks |= gen_king_moves(board, moves);
-    attacks |= gen_castling(board, moves, occupancy);
+    MoveList moves;
 
-    return attacks;
+    attacks |= gen_pawn_moves(board, moves.ptr, occupancy, enemyAttacks);
+    attacks |= gen_knight_moves(board, moves.ptr, occupancy, enemyAttacks);
+    attacks |= gen_bishop_moves(board, moves.ptr, occupancy, enemyAttacks);
+    attacks |= gen_rook_moves(board, moves.ptr, occupancy, enemyAttacks);
+    attacks |= gen_queen_moves(board, moves.ptr, occupancy, enemyAttacks);
+    attacks |= gen_king_moves(board, moves.ptr, enemyAttacks);
+    attacks |= gen_castling(board, moves.ptr, occupancy, enemyAttacks);
+
+    moves.attacks = attacks;
+    return moves;
 }

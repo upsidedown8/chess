@@ -42,6 +42,9 @@ extern U64 NOT_FILES[256];
 
 extern U64 SLIDER_RANGE[NUM_SQUARES][NUM_SQUARES];
 
+extern U64 SET_BIT_TABLE[NUM_SQUARES];
+extern U64 CLEAR_BIT_TABLE[NUM_SQUARES];
+
 /* -------------------------------------------------------------------------- */
 /*                                Attack tables                               */
 /* -------------------------------------------------------------------------- */

@@ -180,8 +180,8 @@ const chess_cpp::U8 LSB_64_TABLE[NUM_SQUARES] {
 };
 
 // tables
-chess_cpp::U64 SET_BIT_TABLE[NUM_SQUARES];
-chess_cpp::U64 CLEAR_BIT_TABLE[NUM_SQUARES];
+chess_cpp::U64 chess_cpp::SET_BIT_TABLE[NUM_SQUARES];
+chess_cpp::U64 chess_cpp::CLEAR_BIT_TABLE[NUM_SQUARES];
 
 /* -------------------------------------------------------------------------- */
 /*                            Initialize all tables                           */
@@ -281,7 +281,7 @@ chess_cpp::U64 idx_to_u64(int idx, chess_cpp::U64 mask) {
     while (idx&&mask) {
         pos = chess_cpp::pop_lsb(mask);
         if (idx & (1<<i))
-            result |= SET_BIT_TABLE[pos];
+            result |= chess_cpp::SET_BIT_TABLE[pos];
         i++;
     }
 
@@ -503,21 +503,21 @@ void chess_cpp::init() {
             int max = std::max(start, end);
             int diff = max-min;
             if (diff) {
+                int minR, minF, maxR, maxF;
+                calc_rf(min, minR, minF);
+                calc_rf(max, maxR, maxF);
                 // vertical
-                if (diff % 8 == 0) {
+                if (minF == maxF) {
                     for (int i = min+8; i < max; i+=8)
                         set_pos(SLIDER_RANGE[start][end], i);
-                } else {
-                    int minR, minF, maxR, maxF;
-                    calc_rf(min, minR, minF);
-                    calc_rf(max, maxR, maxF);
-                    if (abs(maxR-minR) != abs(maxF-minF)) continue;
-
+                } else if (minR == maxR) {
+                    for (int i = min+1; i < max; i++)
+                        set_pos(SLIDER_RANGE[start][end], i);
+                } else if (abs(maxR-minR)==abs(maxF-minF)) {
                     if (maxR-minR == maxF-minF) {
                         for (int r = minR-1, f = minF-1; r>=0&&r<=7&&f>=0&&f<=7&&r>maxR&&f>maxF; r--, f--)
                             set_pos(SLIDER_RANGE[start][end], calc_pos(r, f));
-                    }
-                    else {
+                    } else {
                         for (int r = minR-1, f = minF+1; r>=0&&r<=7&&f>=0&&f<=7&&r>maxR&&f<maxF; r--, f++)
                             set_pos(SLIDER_RANGE[start][end], calc_pos(r, f));
                     }

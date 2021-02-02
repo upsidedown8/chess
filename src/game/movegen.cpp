@@ -34,13 +34,15 @@ inline U64 get_rook_moves(int sq, U64 occupancy) {
 inline U64 get_attackers(int square, Board &board, U64 occupancy) {
     int color = board.white_to_move ? WHITE : BLACK;
     // rooks, bishops and queens
+    U64 bishopQueen =
+        board.bitboards[board.enemy_color() | Bishop] |
+        board.bitboards[board.enemy_color() | Queen];
+    U64 rookQueen =
+        board.bitboards[board.enemy_color() | Rook] |
+        board.bitboards[board.enemy_color() | Queen];
     U64 attackingPieces =
-        (get_bishop_moves(square, occupancy) |
-         get_rook_moves(square, occupancy))
-            &
-        (board.bitboards[board.enemy_color() | Bishop] |
-         board.bitboards[board.enemy_color() | Rook] |
-         board.bitboards[board.enemy_color() | Queen]);
+        (get_bishop_moves(square, occupancy) & bishopQueen) |
+        (get_rook_moves(square, occupancy) & rookQueen);
     // knights
     attackingPieces |=
         (KNIGHT_MOVES[square] & board.bitboards[board.enemy_color() | Knight]);
@@ -64,13 +66,15 @@ inline bool is_under_attack(int square, Board &board, U64 occupancy) {
         return true;
 
     // rooks, bishops and queens
+    U64 bishopQueen =
+        board.bitboards[board.enemy_color() | Bishop] |
+        board.bitboards[board.enemy_color() | Queen];
+    U64 rookQueen =
+        board.bitboards[board.enemy_color() | Rook] |
+        board.bitboards[board.enemy_color() | Queen];
     return
-        (get_bishop_moves(square, occupancy) |
-         get_rook_moves(square, occupancy))
-            &
-        (board.bitboards[board.enemy_color() | Bishop] |
-         board.bitboards[board.enemy_color() | Rook] |
-         board.bitboards[board.enemy_color() | Queen]);
+        (get_bishop_moves(square, occupancy) & bishopQueen) |
+        (get_rook_moves(square, occupancy) & rookQueen);
 }
 
 // pawn: pins

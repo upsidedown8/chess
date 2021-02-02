@@ -105,7 +105,7 @@ bool Board::from_string(const std::string &str) {
         en_passant = not_on_board;
         pos+=2;
     } else {
-        en_passant = (7-(str[pos]-'a')) + (str[pos+1]-'0')*8;
+        en_passant = calc_pos(str[pos+1]-'1', str[pos]-'a');
         pos += 3;
     }
 

@@ -13,6 +13,8 @@ chess_cpp::U64 chess_cpp::FILES[256];
 chess_cpp::U64 chess_cpp::NOT_RANKS[256];
 chess_cpp::U64 chess_cpp::NOT_FILES[256];
 
+chess_cpp::U64 chess_cpp::SLIDER_RANGE[NUM_SQUARES][NUM_SQUARES];
+
 /* -------------------------------------------------------------------------- */
 /*                                Attack tables                               */
 /* -------------------------------------------------------------------------- */
@@ -483,15 +485,44 @@ void chess_cpp::init() {
         for (int file = 0; file < 8; file++) {
             int pos = calc_pos(rank, file);
             
-            attacks = 0ULL;
-            if (file != 7) set_pos(attacks, pos-7);
-            if (file != 0) set_pos(attacks, pos-9);
-            PAWN_ATTACKS[WHITE][pos] = attacks;
+            PAWN_ATTACKS[WHITE][pos] = 0ULL;
+            if (file != 7) set_pos(PAWN_ATTACKS[WHITE][pos], pos-7);
+            if (file != 0) set_pos(PAWN_ATTACKS[WHITE][pos], pos-9);
 
-            attacks = 0ULL;
-            if (file != 7) set_pos(attacks, pos+9);
-            if (file != 0) set_pos(attacks, pos+7);
-            PAWN_ATTACKS[BLACK][pos] = attacks;
+            PAWN_ATTACKS[BLACK][pos] = 0ULL;
+            if (file != 7) set_pos(PAWN_ATTACKS[BLACK][pos], pos+9);
+            if (file != 0) set_pos(PAWN_ATTACKS[BLACK][pos], pos+7);
+        }
+    }
+
+    // slider range
+    for (int start = 0; start < NUM_SQUARES; start++) {
+        for (int end = 0; end < NUM_SQUARES; end++) {
+            SLIDER_RANGE[start][end] = 0ULL;
+            int min = std::min(start, end);
+            int max = std::max(start, end);
+            int diff = max-min;
+            if (diff) {
+                // vertical
+                if (diff % 8 == 0) {
+                    for (int i = min+8; i < max; i+=8)
+                        set_pos(SLIDER_RANGE[start][end], i);
+                } else {
+                    int minR, minF, maxR, maxF;
+                    calc_rf(min, minR, minF);
+                    calc_rf(max, maxR, maxF);
+                    if (abs(maxR-minR) != abs(maxF-minF)) continue;
+
+                    if (maxR-minR == maxF-minF) {
+                        for (int r = minR-1, f = minF-1; r>=0&&r<=7&&f>=0&&f<=7&&r>maxR&&f>maxF; r--, f--)
+                            set_pos(SLIDER_RANGE[start][end], calc_pos(r, f));
+                    }
+                    else {
+                        for (int r = minR-1, f = minF+1; r>=0&&r<=7&&f>=0&&f<=7&&r>maxR&&f<maxF; r--, f++)
+                            set_pos(SLIDER_RANGE[start][end], calc_pos(r, f));
+                    }
+                }
+            }
         }
     }
 }

@@ -6,6 +6,8 @@
 
 #define NUM_SQUARES 64
 
+#define FULL_BB  0xffffffffffffffffULL
+
 namespace chess_cpp {
 
 typedef uint8_t     U8;
@@ -37,6 +39,8 @@ extern U64 RANKS[256];
 extern U64 FILES[256];
 extern U64 NOT_RANKS[256];
 extern U64 NOT_FILES[256];
+
+extern U64 SLIDER_RANGE[NUM_SQUARES][NUM_SQUARES];
 
 /* -------------------------------------------------------------------------- */
 /*                                Attack tables                               */

@@ -12,7 +12,6 @@ namespace chess_cpp {
 struct MoveList {
     Move moves[256];
     Move *ptr;
-    U64 attacks;
 
     MoveList();
 
@@ -22,7 +21,7 @@ struct MoveList {
 /* -------------------------------------------------------------------------- */
 /*                               Move generation                              */
 /* -------------------------------------------------------------------------- */
-MoveList gen_moves(Board &board, U64 enemyAttacks);
+MoveList gen_moves(Board &board);
 
 }
 

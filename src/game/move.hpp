@@ -44,6 +44,11 @@ public:
     std::string to_string();
 };
 
+class UndoInfo {
+    int fiftyMove;
+    Pieces capturedPiece;
+};
+
 }
 
 #endif // CHESS_GAME_MOVE_HPP

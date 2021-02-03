@@ -10,11 +10,32 @@ include_directories(
 	src/
 )
 
-add_executable(
-	chess
+add_library(
+	chess_lib
 	src/game/board.cpp
 	src/game/defs.cpp
 	src/game/move.cpp
 	src/game/movegen.cpp
+)
+
+add_executable(
+	chess
 	src/main.cpp
+)
+target_link_libraries(
+	chess
+	chess_lib
+)
+
+find_package(GTest REQUIRED)
+include_directories(${GTEST_INCLUDE_DIRS})
+add_executable(
+	tests
+	test/tests.cpp
+)
+target_link_libraries(
+	tests
+	chess_lib
+	${GTEST_LIBRARIES}
+    pthread
 )

@@ -41,6 +41,8 @@ public:
 
     std::string to_fen();
     std::string to_string();
+
+    bool operator==(Board &other);
 };
 
 }

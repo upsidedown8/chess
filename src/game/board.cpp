@@ -22,8 +22,8 @@ bool Board::from_string(const std::string &str) {
 
     // parse board
     int pos = 0;
-    U64 square = 0;
-    while (square < 64 && pos < str.length()) {
+    int square = 0;
+    while (square < NUM_SQUARES && pos < str.length()) {
         int piece = None;
         switch (str[pos]) {
             case 'p': piece = Black | Pawn;   break;
@@ -48,8 +48,7 @@ bool Board::from_string(const std::string &str) {
             case '6':
             case '7':
             case '8':
-            case '9':
-                square += (str[pos]-'0');
+                square += str[pos]-'0';
                 break;
             
             case '/':
@@ -407,27 +406,18 @@ Colors Board::enemy_color() {
 
 std::string Board::to_fen() {
     std::stringstream ss;
-    U64 square = 1ULL;
+    int square = 0;
     int rank = 0, file = 0, empty = 0;
     while (rank < 8) {
-        bool found = false;
-        for (int color : {White, Black}) {
-            for (int piece = Pawn; piece <= King; piece++) {
-                if (bitboards[color | piece] & square) {
-                    ss << get_notation(color | piece);
-                    found = true;
-                    break;
-                }
-            }
-        }
-        if (found) {
+        if (pieces[square] != None) {
             if (empty)
                 ss << empty;
             empty = 0;
+            ss << get_notation(pieces[square]);
         } else {
             empty++;
         }
-        square <<= 1;
+        square++;
         if (++file >= 8) {
             if (empty)      ss << empty;
             if (rank++ < 7) ss << '/';
@@ -437,15 +427,19 @@ std::string Board::to_fen() {
 
     ss << ' ' << (white_to_move ? 'w' : 'b') << ' ';
 
-    if (castling & WHITE_CASTLE_KS) ss << 'K';
     if (castling & WHITE_CASTLE_QS) ss << 'Q';
-    if (castling & BLACK_CASTLE_KS) ss << 'k';
     if (castling & BLACK_CASTLE_QS) ss << 'q';
+    if (castling & WHITE_CASTLE_KS) ss << 'K';
+    if (castling & BLACK_CASTLE_KS) ss << 'k';
     if (!castling)                  ss << '-';
 
     ss << ' ';
     if (en_passant == not_on_board) ss << '-';
-    else                            ss << en_passant;
+    else {
+        int r, f;
+        calc_rf(en_passant, r, f);
+        ss << (char)('a' + f) << (char)('1' + r);
+    }
     ss << ' ' << (int)half_move_count;
     ss << ' ' << (int)full_move_count;
 
@@ -465,4 +459,26 @@ std::string Board::to_string() {
     ss << "  a b c d e f g h" << std::endl;
     ss << (white_to_move ? "White" : "Black") << " to move";
     return ss.str();
+}
+
+bool Board::operator==(Board &other) {
+    for (int color : {White, Black}) {
+        for (int piece = Pawn; piece <= All; piece++) {
+            if (bitboards[color|piece] != other.bitboards[color|piece]) {
+                return false;
+            }
+        }
+    }
+    for (int sq = 0; sq < NUM_SQUARES; sq++) {
+        if (pieces[sq] != other.pieces[sq]) {
+            return false;
+        }
+    }
+    return 
+        fifty_move == other.fifty_move &&
+        castling == other.castling &&
+        en_passant == other.castling &&
+        full_move_count == other.full_move_count &&
+        half_move_count == other.half_move_count &&
+        white_to_move == other.white_to_move;
 }

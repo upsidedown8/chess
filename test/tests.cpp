@@ -73,6 +73,42 @@ TEST(Perft, Depth7) {
     ASSERT_EQ(Perft("8/k1P5/8/1K6/8/8/8/8 w - - 0 1", 7), 567584);
 }
 
+void fen_test(const std::string &fen) {
+    Board board(fen);
+    ASSERT_EQ(board.to_fen(), fen) << board.to_string() << std::endl;
+}
+
+TEST(BoardTests, FEN) {
+    fen_test("r6r/1b2k1bq/8/8/7B/8/8/R3K2R b QK - 3 2");
+    fen_test("8/8/8/2k5/2pP4/8/B7/4K3 b - d3 5 3");
+    fen_test("r1bqkbnr/pppppppp/n7/8/8/P7/1PPPPPPP/RNBQKBNR w QqKk - 2 2");
+    fen_test("r3k2r/p1pp1pb1/bn2Qnp1/2qPN3/1p2P3/2N5/PPPBBPPP/R3K2R b QqKk - 3 2");
+    fen_test("rnb2k1r/pp1Pbppp/2p5/q7/2B5/8/PPPQNnPP/RNB1K2R w QK - 3 9");
+    fen_test("2r5/3pk3/8/2P5/8/2K5/8/8 w - - 5 4");
+    fen_test("2kr3r/p1ppqpb1/bn2Qnp1/3PN3/1p2P3/2N5/PPPBBPPP/R3K2R b QK - 3 2");
+    fen_test("4k3/8/8/5R2/8/8/8/4K3 b - - 0 1");
+    fen_test("8/4k3/8/8/4R3/8/8/4K3 b - - 0 1");
+    fen_test("4k3/6N1/5b2/4R3/8/8/8/4K3 b - - 0 1");
+    fen_test("4k3/8/6n1/4R3/8/8/8/4K3 b - - 0 1");
+    fen_test("8/8/8/2k5/3Pp3/8/8/4K3 b - d3 0 1");
+    fen_test("8/8/8/1k6/3Pp3/8/8/4KQ2 b - d3 0 1");
+    fen_test("4k3/8/4r3/8/8/4Q3/8/2K5 b - - 0 1");
+    fen_test("8/8/8/8/k2Pp2Q/8/8/2K5 b - d3 0 1");
+}
+
+TEST(BoardTests, UndoMove) {
+    std::string fen = "r1bqkbnr/pppppppp/n7/8/8/P7/1PPPPPPP/RNBQKBNR w QqKk - 2 2";
+    Board board(fen);
+
+    for (Move &move : gen_moves(board)) {
+        Board testBoard("r1bqkbnr/pppppppp/n7/8/8/P7/1PPPPPPP/RNBQKBNR w QqKk - 2 2");
+
+        UndoInfo info = testBoard.make_move(move);
+        testBoard.undo_move(move, info);
+        ASSERT_TRUE(testBoard == board) << move.to_string();
+    }
+}
+
 int main(int argc, char **argv) {
     testing::InitGoogleTest(&argc, argv);
     chess_cpp::init();

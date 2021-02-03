@@ -176,7 +176,6 @@ UndoInfo Board::make_move(Move &move) {
     assert((pieces[start]&PIECE_COLOR) == (white_to_move?White:Black));
     assert((pieces[end] == None) || ((pieces[start]&PIECE_COLOR) != (pieces[end]&PIECE_COLOR)));
 
-    white_to_move = !white_to_move;
     if ((pieces[start]&0b111)==Pawn || pieces[end] != None) {
         fifty_move = 0;
     } else {
@@ -283,6 +282,7 @@ UndoInfo Board::make_move(Move &move) {
             break;
         }
     }
+    white_to_move = !white_to_move;
     return info;
 }
 void Board::undo_move(Move &move, UndoInfo &info) {
@@ -320,12 +320,12 @@ void Board::undo_move(Move &move, UndoInfo &info) {
             break;
         }
         case MOVETYPE_CASTLE: {
-            set_pos(bitboards[pieces[end]], start);
-            clr_pos(bitboards[pieces[end]], end);
+            set_pos(bitboards[activeColor | King], start);
+            clr_pos(bitboards[activeColor | King], end);
             set_pos(bitboards[activeColor | All], start);
             clr_pos(bitboards[activeColor | All], end);
 
-            pieces[start] = pieces[end];
+            pieces[start] = activeColor | King;
             pieces[end] = None;
 
             int offset = start - (start%8);
@@ -333,12 +333,12 @@ void Board::undo_move(Move &move, UndoInfo &info) {
                 case MOVECASTLE_QS: {
                     castling |= 0b01<<(2*white_to_move);
 
-                    clr_pos(bitboards[pieces[offset+3]], offset+3);
-                    set_pos(bitboards[pieces[offset+3]], offset);
+                    clr_pos(bitboards[activeColor | Rook], offset+3);
+                    set_pos(bitboards[activeColor | Rook], offset);
                     clr_pos(bitboards[activeColor | All], offset+3);
                     set_pos(bitboards[activeColor | All], offset);
 
-                    pieces[offset] = pieces[offset+3];
+                    pieces[offset] = activeColor | Rook;
                     pieces[offset+3] = None;
                     break;
                 }
@@ -346,12 +346,12 @@ void Board::undo_move(Move &move, UndoInfo &info) {
                 default: {
                     castling |= 0b10<<(2*white_to_move);
 
-                    clr_pos(bitboards[pieces[offset+5]], offset+5);
-                    set_pos(bitboards[pieces[offset+5]], offset+7);
+                    clr_pos(bitboards[activeColor | Rook], offset+5);
+                    set_pos(bitboards[activeColor | Rook], offset+7);
                     clr_pos(bitboards[activeColor | All], offset+5);
                     set_pos(bitboards[activeColor | All], offset+7);
 
-                    pieces[offset+7] = pieces[offset+5];
+                    pieces[offset+7] = activeColor | Rook;
                     pieces[offset+5] = None;
                     break;
                 }
@@ -367,29 +367,27 @@ void Board::undo_move(Move &move, UndoInfo &info) {
             clr_pos(bitboards[activeColor | All], end);
 
             pieces[start] = activeColor | Pawn;
-
-            if (endPiece != None) {
-                clr_pos(bitboards[pieces[end]], end);
-                clr_pos(bitboards[(pieces[end]&PIECE_COLOR) | All], end);
-            } else {
-                pieces[end] = None;
-            }
-            break;
-        }
-        // capture/simple
-        default: {
-            clr_pos(bitboards[pieces[end]], start);
-            set_pos(bitboards[pieces[end]], end);
-            clr_pos(bitboards[activeColor | All], start);
-            set_pos(bitboards[activeColor | All], end);
-            pieces[start] = pieces[end];
+            pieces[end] = endPiece;
 
             if (endPiece != None) {
                 set_pos(bitboards[endPiece], end);
                 set_pos(bitboards[enemyColor | All], end);
-                pieces[end] = endPiece;
-            } else {
-                pieces[end] = None;
+            }
+
+            break;
+        }
+        // capture/simple
+        default: {
+            set_pos(bitboards[pieces[end]], start);
+            clr_pos(bitboards[pieces[end]], end);
+            set_pos(bitboards[activeColor | All], start);
+            clr_pos(bitboards[activeColor | All], end);
+            pieces[start] = pieces[end];
+            pieces[end] = endPiece;
+
+            if (endPiece != None) {
+                set_pos(bitboards[endPiece], end);
+                set_pos(bitboards[enemyColor | All], end);
             }
 
             break;

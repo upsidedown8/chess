@@ -166,14 +166,23 @@ void Board::update_bitboards() {
         bitboards[Black | Queen] |
         bitboards[Black | King];
 }
-void Board::make_move(Move &move) {
+UndoInfo Board::make_move(Move &move) {
     U8 start = move.get_start();
     U8 end   = move.get_end();
+
+    UndoInfo info(fifty_move, en_passant, pieces[end]);
 
     assert(pieces[start] != None);
     assert(start != end);
     assert((pieces[start]&PIECE_COLOR) == (white_to_move?White:Black));
     assert((pieces[end] == None) || ((pieces[start]&PIECE_COLOR) != (pieces[end]&PIECE_COLOR)));
+
+    white_to_move = !white_to_move;
+    if ((pieces[start]&0b111)==Pawn || pieces[end] != None) {
+        fifty_move = 0;
+    } else {
+        fifty_move++;
+    }
 
     switch (move.value & MOVEFLAG_TYPE) {
         case MOVETYPE_ENPASSANT: {
@@ -246,6 +255,7 @@ void Board::make_move(Move &move) {
             clr_pos(bitboards[pieces[start]], start);
             set_pos(bitboards[promotionPiece], end);
             clr_pos(bitboards[(pieces[start]&PIECE_COLOR) | All], start);
+            set_pos(bitboards[(pieces[start]&PIECE_COLOR) | All], end);
 
             pieces[start] = None;
             pieces[end] = promotionPiece;
@@ -274,11 +284,118 @@ void Board::make_move(Move &move) {
             break;
         }
     }
+    return info;
+}
+void Board::undo_move(Move &move, UndoInfo &info) {
+    U8 start = move.get_start();
+    U8 end   = move.get_end();
+
+    assert(pieces[start] == None);
+    assert(pieces[end] != None);
+    assert(start != end);
+    assert((pieces[end]&PIECE_COLOR) == (white_to_move?Black:White));
 
     white_to_move = !white_to_move;
-}
-void Board::undo_move(Move &move) {
-    
+    fifty_move = info.get_fifty_move();
+    en_passant = info.get_en_passant();
+    int endPiece = info.get_captured_piece();
+
+    Colors activeColor = active_color();
+    Colors enemyColor = enemy_color();
+
+    switch (move.value & MOVEFLAG_TYPE) {
+        case MOVETYPE_ENPASSANT: {
+            assert(en_passant != not_on_board);
+
+            set_pos(bitboards[enemyColor | Pawn], end);
+            set_pos(bitboards[activeColor | Pawn], start);
+            clr_pos(bitboards[activeColor | Pawn], en_passant);
+            set_pos(bitboards[enemyColor | All], end);
+            set_pos(bitboards[activeColor | All], start);
+            clr_pos(bitboards[activeColor | All], en_passant);
+
+            pieces[en_passant] = None;
+            pieces[start] = activeColor | Pawn;
+            pieces[end] = enemyColor | Pawn;
+
+            break;
+        }
+        case MOVETYPE_CASTLE: {
+            set_pos(bitboards[pieces[end]], start);
+            clr_pos(bitboards[pieces[end]], end);
+            set_pos(bitboards[activeColor | All], start);
+            clr_pos(bitboards[activeColor | All], end);
+
+            pieces[start] = pieces[end];
+            pieces[end] = None;
+
+            int offset = start - (start%8);
+            switch (move.value&MOVEFLAG_PIECE) {
+                case MOVECASTLE_QS: {
+                    castling |= 0b01<<(2*white_to_move);
+
+                    clr_pos(bitboards[pieces[offset+3]], offset+3);
+                    set_pos(bitboards[pieces[offset+3]], offset);
+                    clr_pos(bitboards[activeColor | All], offset+3);
+                    set_pos(bitboards[activeColor | All], offset);
+
+                    pieces[offset] = pieces[offset+3];
+                    pieces[offset+3] = None;
+                    break;
+                }
+                case MOVECASTLE_KS:
+                default: {
+                    castling |= 0b10<<(2*white_to_move);
+
+                    clr_pos(bitboards[pieces[offset+5]], offset+5);
+                    set_pos(bitboards[pieces[offset+5]], offset+7);
+                    clr_pos(bitboards[activeColor | All], offset+5);
+                    set_pos(bitboards[activeColor | All], offset+7);
+
+                    pieces[offset+7] = pieces[offset+5];
+                    pieces[offset+5] = None;
+                    break;
+                }
+            }
+            break;
+        }
+        case MOVETYPE_PROMOTION: {
+            int promotionPiece = activeColor | (1+(move.value & MOVEFLAG_PIECE));
+
+            set_pos(bitboards[activeColor | Pawn], start);
+            clr_pos(bitboards[promotionPiece], end);
+            set_pos(bitboards[activeColor | All], start);
+            clr_pos(bitboards[activeColor | All], end);
+
+            pieces[start] = activeColor | Pawn;
+
+            if (endPiece != None) {
+                clr_pos(bitboards[pieces[end]], end);
+                clr_pos(bitboards[(pieces[end]&PIECE_COLOR) | All], end);
+            } else {
+                pieces[end] = None;
+            }
+            break;
+        }
+        // capture/simple
+        default: {
+            clr_pos(bitboards[pieces[end]], start);
+            set_pos(bitboards[pieces[end]], end);
+            clr_pos(bitboards[activeColor | All], start);
+            set_pos(bitboards[activeColor | All], end);
+            pieces[start] = pieces[end];
+
+            if (endPiece != None) {
+                set_pos(bitboards[endPiece], end);
+                set_pos(bitboards[enemyColor | All], end);
+                pieces[end] = endPiece;
+            } else {
+                pieces[end] = None;
+            }
+
+            break;
+        }
+    }
 }
 
 Colors Board::active_color() {

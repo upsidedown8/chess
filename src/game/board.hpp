@@ -22,6 +22,7 @@ public:
     U8 castling;
     U8 half_move_count;
     U8 full_move_count;
+    U8 fifty_move;
     U8 en_passant;
 
     int pieces[NUM_SQUARES];
@@ -32,8 +33,8 @@ public:
 
     void reset();
     void update_bitboards();
-    void make_move(Move &move);
-    void undo_move(Move &move);
+    UndoInfo make_move(Move &move);
+    void undo_move(Move &move, UndoInfo &info);
 
     Colors active_color();
     Colors enemy_color();

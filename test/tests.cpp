@@ -18,9 +18,9 @@ U64 Perft(Board &board, int depth) {
 
     U64 nodes = 0;
     for (int i = 0; i < move_list.size(); i++) {
-        board.make_move(move_list[i]);
+        UndoInfo info = board.make_move(move_list[i]);
         nodes += Perft(board, depth - 1);
-        board.undo_move(move_list[i]);
+        board.undo_move(move_list[i], info);
     }
     return nodes;
 }

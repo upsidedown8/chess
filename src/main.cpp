@@ -8,18 +8,28 @@ using namespace chess_cpp;
 int main(int argc, char const *argv[]) {
     init();
 
-    std::string fen;
-    std::cout << "Enter FEN: ";
-    getline(std::cin, fen);
-    Board board(fen);
+    // std::string fen;
+    // std::cout << "Enter FEN: ";
+    // getline(std::cin, fen);
+    // Board board(fen);
 
-    auto moves = gen_moves(board);
+    // auto moves = gen_moves(board);
 
-    std::cout << "number of moves: " << moves.size() << std::endl;
-    for (int i=0; i < moves.size(); i++) {
-        std::cout << moves[i].to_string() << ' ';
-    }
-    std::cout << std::endl;
+    // std::cout << "number of moves: " << moves.size() << std::endl;
+    // for (int i=0; i < moves.size(); i++) {
+    //     std::cout << moves[i].to_string() << ' ';
+    // }
+    // std::cout << std::endl;
     
+    Board board;
+
+    Move move(e2, e4, 0);
+    UndoInfo info = board.make_move(move);
+
+    std::cout << board.to_string();
+
+    board.undo_move(move, info);
+    std::cout << board.to_string();
+
     return 0;
 }

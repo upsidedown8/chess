@@ -45,8 +45,17 @@ public:
 };
 
 class UndoInfo {
-    int fiftyMove;
-    Pieces capturedPiece;
+private:
+    U8 fifty_move;
+    U8 en_passant;
+    int captured;
+    
+public:
+    UndoInfo(int fiftyMove, int enPassant, int piece);
+    
+    U8 get_fifty_move();
+    U8 get_en_passant();
+    int get_captured_piece();
 };
 
 }

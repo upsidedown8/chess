@@ -33,3 +33,19 @@ std::string Move::to_string() {
     }
     return result;
 }
+
+UndoInfo::UndoInfo(int fiftyMove, int enPassant, int piece) {
+    fifty_move = fiftyMove;
+    en_passant = enPassant;
+    captured = piece;
+}
+
+U8 UndoInfo::get_fifty_move() {
+    return fifty_move;
+}
+U8 UndoInfo::get_en_passant() {
+    return en_passant;
+}
+int UndoInfo::get_captured_piece() {
+    return captured;
+}

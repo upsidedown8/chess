@@ -80,16 +80,16 @@ bool Board::from_string(const std::string &str) {
     castling = 0;
     while (pos < str.length() && str[pos] != ' ') {
         switch (str[pos++]) {
-            case 'Q':
+            case 'q':
                 castling |= BLACK_CASTLE_QS;
                 break;
-            case 'K':
+            case 'k':
                 castling |= BLACK_CASTLE_KS;
                 break;
-            case 'q':
+            case 'Q':
                 castling |= WHITE_CASTLE_QS;
                 break;
-            case 'k':
+            case 'K':
                 castling |= WHITE_CASTLE_KS;
                 break;
             case '-':
@@ -149,6 +149,22 @@ Board::Board(const std::string &str) {
 void Board::reset() {
     bool fen_success = from_string("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
     assert(fen_success);
+}
+void Board::update_bitboards() {
+    bitboards[White | All] =
+        bitboards[White | Pawn] |
+        bitboards[White | Knight] |
+        bitboards[White | Bishop] |
+        bitboards[White | Rook] |
+        bitboards[White | Queen] |
+        bitboards[White | King];
+    bitboards[Black | All] =
+        bitboards[Black | Pawn] |
+        bitboards[Black | Knight] |
+        bitboards[Black | Bishop] |
+        bitboards[Black | Rook] |
+        bitboards[Black | Queen] |
+        bitboards[Black | King];
 }
 void Board::make_move(Move &move) {
     U8 start = move.get_start();
@@ -260,6 +276,9 @@ void Board::make_move(Move &move) {
     }
 
     white_to_move = !white_to_move;
+}
+void Board::undo_move(Move &move) {
+    
 }
 
 Colors Board::active_color() {

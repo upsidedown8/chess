@@ -31,7 +31,9 @@ public:
     Board(const std::string &str);
 
     void reset();
+    void update_bitboards();
     void make_move(Move &move);
+    void undo_move(Move &move);
 
     Colors active_color();
     Colors enemy_color();

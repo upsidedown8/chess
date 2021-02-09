@@ -72,6 +72,8 @@ extern U8  BISHOP_MAGIC_SHIFTS[NUM_SQUARES];
 extern U64 ROOK_MOVES[NUM_SQUARES][4096];
 extern U64 BISHOP_MOVES[NUM_SQUARES][4096];
 
+extern U8 LSB_64_TABLE[NUM_SQUARES];
+
 /* -------------------------------------------------------------------------- */
 /*                                 Ranks/Files                                */
 /* -------------------------------------------------------------------------- */
@@ -122,17 +124,41 @@ std::string bb_to_string(U64 bitboard);
 /* -------------------------------------------------------------------------- */
 /*                            Rank/File to Position                           */
 /* -------------------------------------------------------------------------- */
-U8 calc_pos(int rank, int file);
-void calc_rf(U8 pos, int &rank, int &file);
+inline U8 calc_pos(int rank, int file) {
+    return (7-rank) * 8 + file;
+}
+inline void calc_rf(U8 pos, int &rank, int &file) {
+    file = pos % 8;
+    rank = 7-(pos / 8);
+}
 
 /* -------------------------------------------------------------------------- */
 /*                             Bitwise operations                             */
 /* -------------------------------------------------------------------------- */
-bool is_set(const U64 &board, U8 pos);
-void set_pos(U64 &board, U8 pos);
-void clr_pos(U64 &board, U8 pos);
-U8 count_occupied(U64 board);
-U8 pop_lsb(U64 &board);
+inline bool is_set(const U64 &board, U8 pos) {
+    return board & SET_BIT_TABLE[pos];
+}
+inline void set_pos(U64 &board, U8 pos) {
+    board |= SET_BIT_TABLE[pos];
+}
+inline void clr_pos(U64 &board, U8 pos) {
+    board &= CLEAR_BIT_TABLE[pos];
+}
+inline U8 count_occupied(U64 board) {
+    U8 count = 0;
+    while (board) {
+        board &= board-1;
+        count++;
+    }
+    return count;
+}
+inline U8 pop_lsb(U64 &board) {
+    // assert(board != 0);
+    U64 b = board ^ (board - 1);
+    unsigned int folded = (unsigned) ((b & 0xffffffff) ^ (b >> 32));
+    board &= (board - 1);
+    return LSB_64_TABLE[(folded * 0x783A9B23) >> 26];
+}
 
 }
 

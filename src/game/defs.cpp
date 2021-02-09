@@ -168,7 +168,7 @@ chess_cpp::U8 chess_cpp::BISHOP_MAGIC_SHIFTS[NUM_SQUARES];
 chess_cpp::U64 chess_cpp::ROOK_MOVES[NUM_SQUARES][4096];
 chess_cpp::U64 chess_cpp::BISHOP_MOVES[NUM_SQUARES][4096];
 
-const chess_cpp::U8 LSB_64_TABLE[NUM_SQUARES] {
+chess_cpp::U8 chess_cpp::LSB_64_TABLE[NUM_SQUARES] {
     63, 30,  3, 32, 25, 41, 22, 33,
     15, 50, 42, 13, 11, 53, 19, 34,
     61, 29,  2, 51, 21, 43, 45, 10,
@@ -546,43 +546,4 @@ std::string chess_cpp::bb_to_string(U64 bitboard) {
     ss << "  a b c d e f g h";
 
     return ss.str();
-}
-
-/* -------------------------------------------------------------------------- */
-/*                            Rank/File to Position                           */
-/* -------------------------------------------------------------------------- */
-chess_cpp::U8 chess_cpp::calc_pos(int rank, int file) {
-    return (7-rank) * 8 + file;
-}
-void chess_cpp::calc_rf(U8 pos, int &rank, int &file) {
-    file = pos % 8;
-    rank = 7-(pos / 8);
-}
-
-/* -------------------------------------------------------------------------- */
-/*                             Bitwise operations                             */
-/* -------------------------------------------------------------------------- */
-bool chess_cpp::is_set(const U64 &board, U8 pos) {
-    return board & SET_BIT_TABLE[pos];
-}
-void chess_cpp::set_pos(U64 &board, U8 pos) {
-    board |= SET_BIT_TABLE[pos];
-}
-void chess_cpp::clr_pos(U64 &board, U8 pos) {
-    board &= CLEAR_BIT_TABLE[pos];
-}
-chess_cpp::U8 chess_cpp::count_occupied(U64 board) {
-    U8 count = 0;
-    while (board) {
-        board &= board-1;
-        count++;
-    }
-    return count;
-}
-chess_cpp::U8 chess_cpp::pop_lsb(U64 &board) {
-    assert(board != 0);
-    U64 b = board ^ (board - 1);
-    unsigned int folded = (unsigned) ((b & 0xffffffff) ^ (b >> 32));
-    board &= (board - 1);
-    return LSB_64_TABLE[(folded * 0x783A9B23) >> 26];
 }

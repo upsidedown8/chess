@@ -34,12 +34,16 @@ std::string Move::to_string() {
     return result;
 }
 
-UndoInfo::UndoInfo(int fiftyMove, int enPassant, int piece) {
-    fifty_move = fiftyMove;
-    en_passant = enPassant;
-    captured = piece;
+UndoInfo::UndoInfo(int castling, int fiftyMove, int enPassant, int piece) {
+    this->castling = castling;
+    this->fifty_move = fiftyMove;
+    this->en_passant = enPassant;
+    this->captured = piece;
 }
 
+U8 UndoInfo::get_castling() {
+    return castling;
+}
 U8 UndoInfo::get_fifty_move() {
     return fifty_move;
 }

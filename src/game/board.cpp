@@ -255,6 +255,17 @@ UndoInfo Board::make_move(Move &move) {
             clr_pos(bitboards[(pieces[start]&PIECE_COLOR) | All], start);
             set_pos(bitboards[(pieces[start]&PIECE_COLOR) | All], end);
 
+            if (pieces[end] == (enemy_color()|Rook)) {
+                // if FRIENDLY PAWN takes ENEMY ROOK, then that enemy side cannot be castled to
+                switch (end) {
+                    case a1: castling &= ~WHITE_CASTLE_QS; break;
+                    case h1: castling &= ~WHITE_CASTLE_KS; break;
+                    case a8: castling &= ~BLACK_CASTLE_QS; break;
+                    case h8: castling &= ~BLACK_CASTLE_KS; break;
+                    default: break;
+                }
+            }
+
             pieces[start] = None;
             pieces[end] = promotionPiece;
             en_passant = not_on_board;
@@ -271,24 +282,33 @@ UndoInfo Board::make_move(Move &move) {
                 clr_pos(bitboards[(pieces[end]&PIECE_COLOR) | All], end);
             }
 
-            // if the king moves then that player cannot castle
-            if ((pieces[start]&0b111) == King)
-                castling &= 0b1100>>(2*white_to_move);
-            // if ANY friendly piece moved FROM square, then that side cannot be castled to
-            switch (start) {
-                case a1: castling &= ~WHITE_CASTLE_QS; break;
-                case h1: castling &= ~WHITE_CASTLE_KS; break;
-                case a8: castling &= ~BLACK_CASTLE_QS; break;
-                case h8: castling &= ~BLACK_CASTLE_KS; break;
+            switch (pieces[start] & 0b111) {
+                case King: {
+                    // if the king moves then that player cannot castle
+                    castling &= 0b1100>>(2*white_to_move);
+                }
+                case Rook: {
+                    // if FRIENDLY ROOK moved FROM square, then that side cannot be castled to
+                    switch (start) {
+                        case a1: castling &= ~WHITE_CASTLE_QS; break;
+                        case h1: castling &= ~WHITE_CASTLE_KS; break;
+                        case a8: castling &= ~BLACK_CASTLE_QS; break;
+                        case h8: castling &= ~BLACK_CASTLE_KS; break;
+                        default: break;
+                    }
+                }
                 default: break;
             }
-            // if ANY friendly piece TAKES ENEMY rook, then that enemy side cannot be castled to
-            switch (end) {
-                case a1: castling &= ~WHITE_CASTLE_QS; break;
-                case h1: castling &= ~WHITE_CASTLE_KS; break;
-                case a8: castling &= ~BLACK_CASTLE_QS; break;
-                case h8: castling &= ~BLACK_CASTLE_KS; break;
-                default: break;
+
+            if (pieces[end] == (enemy_color()|Rook)) {
+                // if ANY FRIENDLY PIECE takes ENEMY ROOK, then that enemy side cannot be castled to
+                switch (end) {
+                    case a1: castling &= ~WHITE_CASTLE_QS; break;
+                    case h1: castling &= ~WHITE_CASTLE_KS; break;
+                    case a8: castling &= ~BLACK_CASTLE_QS; break;
+                    case h8: castling &= ~BLACK_CASTLE_KS; break;
+                    default: break;
+                }
             }
 
             clr_pos(bitboards[pieces[start]], start);
@@ -301,6 +321,7 @@ UndoInfo Board::make_move(Move &move) {
             break;
         }
     }
+
     white_to_move = !white_to_move;
     return info;
 }
@@ -428,6 +449,7 @@ std::string Board::to_fen() {
     int square = 0;
     int rank = 0, file = 0, empty = 0;
     while (rank < 8) {
+        assert(0 <= square && square <= NUM_SQUARES);
         if (pieces[square] != None) {
             if (empty)
                 ss << empty;

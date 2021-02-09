@@ -294,36 +294,36 @@ void gen_castling(Board &board, std::vector<Move> &outMoves, U64 occupancy) {
     if (board.white_to_move) {
         if (board.castling & WHITE_CASTLE_QS) {
             if (!((occupancy & RANKS[Rank1] & FILES[FileB | FileC | FileD]) ||
-                  is_under_attack(e1, board) ||
-                  is_under_attack(d1, board) ||
-                  is_under_attack(c1, board))) {
+                is_under_attack(e1, board) ||
+                is_under_attack(d1, board) ||
+                is_under_attack(c1, board))) {
                     outMoves.push_back(Move(e1, c1, MOVETYPE_CASTLE | MOVECASTLE_QS));
             }
         }
         if (board.castling & WHITE_CASTLE_KS) {
             if (!((occupancy & RANKS[Rank1] & FILES[FileF | FileG]) ||
-                  is_under_attack(e1, board) ||
-                  is_under_attack(f1, board) ||
-                  is_under_attack(g1, board))) {
-                outMoves.push_back(Move(e1, g1, MOVETYPE_CASTLE | MOVECASTLE_KS));
+                is_under_attack(e1, board) ||
+                is_under_attack(f1, board) ||
+                is_under_attack(g1, board))) {
+                    outMoves.push_back(Move(e1, g1, MOVETYPE_CASTLE | MOVECASTLE_KS));
             }
         }
     }
     else {
         if (board.castling & BLACK_CASTLE_QS) {
             if (!((occupancy & RANKS[Rank8] & FILES[FileB | FileC | FileD]) ||
-                  is_under_attack(e8, board) ||
-                  is_under_attack(d8, board) ||
-                  is_under_attack(c8, board))) {
-                outMoves.push_back(Move(e8, c8, MOVETYPE_CASTLE | MOVECASTLE_QS));
+                is_under_attack(e8, board) ||
+                is_under_attack(d8, board) ||
+                is_under_attack(c8, board))) {
+                    outMoves.push_back(Move(e8, c8, MOVETYPE_CASTLE | MOVECASTLE_QS));
             }
         }
         if (board.castling & BLACK_CASTLE_KS) {
             if (!((occupancy & RANKS[Rank8] & FILES[FileF | FileG]) ||
-                  is_under_attack(e8, board) ||
-                  is_under_attack(f8, board) ||
-                  is_under_attack(g8, board))) {
-                outMoves.push_back(Move(e8, g8, MOVETYPE_CASTLE | MOVECASTLE_KS));
+                is_under_attack(e8, board) ||
+                is_under_attack(f8, board) ||
+                is_under_attack(g8, board))) {
+                    outMoves.push_back(Move(e8, g8, MOVETYPE_CASTLE | MOVECASTLE_KS));
             }
         }
     }
@@ -386,8 +386,8 @@ void gen_pinned_moves(Board &board, std::vector<Move> &outMoves, U64 occupancy, 
                     enPassantCaptures = captures & SET_BIT_TABLE[board.en_passant];
                     if (enPassantCaptures && test_en_passant(board, kingPos, pinnedPos, enPassantEnd))
                         outMoves.push_back(Move(pinnedPos, enPassantEnd, MOVETYPE_ENPASSANT));
-                    captures &= enemy;
                 }
+                captures &= enemy;
                 // Non-Promotion captures
                 nonPromotionCaps = captures & NOT_RANKS[board.white_to_move ? Rank8 : Rank1];
                 if (nonPromotionCaps) outMoves.push_back(Move(pinnedPos, pop_lsb(nonPromotionCaps), 0));

@@ -10,20 +10,24 @@ using namespace chess_cpp;
 U64 Perft(Board &board, int depth, bool displayNodes = false);
 U64 Perft(const std::string &fen, int depth, bool displayNodes = false);
 
+#define MAXDEPTH 8
+
+Move MOVES[MAXDEPTH+1][256];
+
 U64 Perft(Board &board, int depth, bool displayNodes) {
-    auto move_list = gen_moves(board);
+    int numMoves = gen_moves(board, MOVES[depth]);
 
     if (depth <= 1)
-        return move_list.size();
+        return numMoves;
 
     U64 nodes = 0;
-    for (int i = 0; i < move_list.size(); i++) {
-        UndoInfo info = board.make_move(move_list[i]);
+    for (int i = 0; i < numMoves; i++) {
+        UndoInfo info = board.make_move(MOVES[depth][i]);
         U64 childNodes = Perft(board, depth - 1);
         if (displayNodes)
-            std::cout << move_list[i].to_string() << ": " << childNodes << std::endl;
+            std::cout << MOVES[depth][i].to_string() << ": " << childNodes << std::endl;
         nodes += childNodes;
-        board.undo_move(move_list[i], info);
+        board.undo_move(MOVES[depth][i], info);
     }
     return nodes;
 }
@@ -57,12 +61,13 @@ TEST(BoardTests, FEN) {
 void undo_test(const std::string &fen, int &num) {    
     Board board(fen);
 
-    for (Move &move : gen_moves(board)) {
+    int numMoves = gen_moves(board, MOVES[0]);
+    for (int i = 0; i < numMoves; i++) {
         Board testBoard(fen);
 
-        UndoInfo info = testBoard.make_move(move);
-        testBoard.undo_move(move, info);
-        ASSERT_TRUE(testBoard == board) << "test no: " << num << " move: " << move.to_string();
+        UndoInfo info = testBoard.make_move(MOVES[0][i]);
+        testBoard.undo_move(MOVES[0][i], info);
+        ASSERT_TRUE(testBoard == board) << "test no: " << num << " move: " << MOVES[0][i].to_string();
     }
     ++num;
 }
@@ -145,40 +150,41 @@ TEST(Perft, Depth4) {
     ASSERT_EQ(Perft("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1", 4), 43238);
     ASSERT_EQ(Perft("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1", 4), 4085603);
     ASSERT_EQ(Perft("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", 4), 197281);
+    ASSERT_EQ(Perft("r3k2r/p1ppqpb1/bn1Ppnp1/4N3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R b KQkq - 0 1", 4), 3835265);
 }
 TEST(Perft, Depth5) {
     ASSERT_EQ(Perft("r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1", 5), 15833292);
-    // ASSERT_EQ(Perft("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", 5), 4865609);
-    // ASSERT_EQ(Perft("r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1", 5, true), 15833292);
-    // ASSERT_EQ(Perft("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1", 5), 674624);
-    // ASSERT_EQ(Perft("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1", 5), 193690690);
-    // ASSERT_EQ(Perft("8/8/1P2K3/8/2n5/1q6/8/5k2 b - - 0 1", 5), 1004658);
+    ASSERT_EQ(Perft("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1", 5), 674624);
+    ASSERT_EQ(Perft("8/8/1P2K3/8/2n5/1q6/8/5k2 b - - 0 1", 5), 1004658);
+    ASSERT_EQ(Perft("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", 5), 4865609);
+    ASSERT_EQ(Perft("r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1", 5), 15833292);
+    ASSERT_EQ(Perft("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1", 5), 193690690);
 }
-// TEST(Perft, Depth6) {h
-//     ASSERT_EQ(Perft("3k4/3p4/8/K1P4r/8/8/8/8 b - - 0 1", 6), 1134888);
-//     ASSERT_EQ(Perft("8/8/4k3/8/2p5/8/B2P2K1/8 w - - 0 1", 6), 1015133);
-//     ASSERT_EQ(Perft("8/8/1k6/2b5/2pP4/8/5K2/8 b - d3 0 1", 6), 1440467);
-//     ASSERT_EQ(Perft("5k2/8/8/8/8/8/8/4K2R w K - 0 1", 6), 661072);
-//     ASSERT_EQ(Perft("3k4/8/8/8/8/8/8/R3K3 w Q - 0 1", 6), 803711);
-//     ASSERT_EQ(Perft("2K2r2/4P3/8/8/8/8/8/3k4 w - - 0 1", 6), 3821001);
-//     ASSERT_EQ(Perft("4k3/1P6/8/8/8/8/K7/8 w - - 0 1", 6), 217342);
-//     ASSERT_EQ(Perft("8/P1k5/K7/8/8/8/8/8 w - - 0 1", 6), 92683);
-//     ASSERT_EQ(Perft("K1k5/8/P7/8/8/8/8/8 w - - 0 1", 6), 2217);
-//     ASSERT_EQ(Perft("r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1", 6), 706045033);
-//     ASSERT_EQ(Perft("r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1", 6), 706045033);
-//     ASSERT_EQ(Perft("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1", 6), 11030083);
-//     ASSERT_EQ(Perft("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1", 6), 8031647685);
-//     ASSERT_EQ(Perft("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", 6), 119060324);
-// }
-// TEST(Perft, Depth7) {
-//     ASSERT_EQ(Perft("8/k1P5/8/1K6/8/8/8/8 w - - 0 1", 7), 567584);
-//     ASSERT_EQ(Perft("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1", 7), 178633661);
-//     ASSERT_EQ(Perft("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", 7), 3195901860);
-// }
-// TEST(Perft, Depth8) {
-//     ASSERT_EQ(Perft("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1", 8), 3009794393);
-//     ASSERT_EQ(Perft("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", 8), 84998978956);
-// }
+TEST(Perft, Depth6) {
+    ASSERT_EQ(Perft("3k4/3p4/8/K1P4r/8/8/8/8 b - - 0 1", 6), 1134888);
+    ASSERT_EQ(Perft("8/8/4k3/8/2p5/8/B2P2K1/8 w - - 0 1", 6), 1015133);
+    ASSERT_EQ(Perft("8/8/1k6/2b5/2pP4/8/5K2/8 b - d3 0 1", 6), 1440467);
+    ASSERT_EQ(Perft("5k2/8/8/8/8/8/8/4K2R w K - 0 1", 6), 661072);
+    ASSERT_EQ(Perft("3k4/8/8/8/8/8/8/R3K3 w Q - 0 1", 6), 803711);
+    ASSERT_EQ(Perft("2K2r2/4P3/8/8/8/8/8/3k4 w - - 0 1", 6), 3821001);
+    ASSERT_EQ(Perft("4k3/1P6/8/8/8/8/K7/8 w - - 0 1", 6), 217342);
+    ASSERT_EQ(Perft("8/P1k5/K7/8/8/8/8/8 w - - 0 1", 6), 92683);
+    ASSERT_EQ(Perft("K1k5/8/P7/8/8/8/8/8 w - - 0 1", 6), 2217);
+    ASSERT_EQ(Perft("r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1", 6), 706045033);
+    ASSERT_EQ(Perft("r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1", 6), 706045033);
+    ASSERT_EQ(Perft("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1", 6), 11030083);
+    ASSERT_EQ(Perft("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1", 6), 8031647685);
+    ASSERT_EQ(Perft("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", 6), 119060324);
+}
+TEST(Perft, Depth7) {
+    ASSERT_EQ(Perft("8/k1P5/8/1K6/8/8/8/8 w - - 0 1", 7), 567584);
+    ASSERT_EQ(Perft("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1", 7), 178633661);
+    ASSERT_EQ(Perft("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", 7), 3195901860);
+}
+TEST(Perft, Depth8) {
+    ASSERT_EQ(Perft("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1", 8), 3009794393);
+    ASSERT_EQ(Perft("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", 8), 84998978956);
+}
 
 int main(int argc, char **argv) {
     testing::InitGoogleTest(&argc, argv);

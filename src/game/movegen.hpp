@@ -12,7 +12,7 @@ namespace chess_cpp {
 /* -------------------------------------------------------------------------- */
 /*                               Move generation                              */
 /* -------------------------------------------------------------------------- */
-std::vector<Move> gen_moves(Board &board);
+int gen_moves(Board &board, Move *arr);
 
 }
 

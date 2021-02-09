@@ -29,7 +29,7 @@ std::string Move::to_string() {
         result[3] = '1'+r;
     }
     if ((value & MOVEFLAG_TYPE) == MOVETYPE_PROMOTION) {
-        result += "NBRQ"[value & MOVEFLAG_PIECE];
+        result += "nbrq"[value & MOVEFLAG_PIECE];
     }
     return result;
 }

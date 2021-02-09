@@ -20,9 +20,8 @@ private:
 public:
     bool white_to_move;
     U8 castling;
-    U8 half_move_count;
-    U8 full_move_count;
     U8 fifty_move;
+    U8 full_move_count;
     U8 en_passant;
 
     int pieces[NUM_SQUARES];

@@ -69,7 +69,8 @@
         "mutex": "cpp",
         "thread": "cpp",
         "cfenv": "cpp",
-        "cinttypes": "cpp"
+        "cinttypes": "cpp",
+        "set": "cpp"
     },
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
     "editor.fontFamily": "'JetBrains Mono'",

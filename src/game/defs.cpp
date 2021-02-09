@@ -486,12 +486,16 @@ void chess_cpp::init() {
             int pos = calc_pos(rank, file);
             
             PAWN_ATTACKS[WHITE][pos] = 0ULL;
-            if (file != 7) set_pos(PAWN_ATTACKS[WHITE][pos], pos-7);
-            if (file != 0) set_pos(PAWN_ATTACKS[WHITE][pos], pos-9);
+            if (rank != 7) {
+                if (file != 7) set_pos(PAWN_ATTACKS[WHITE][pos], pos-7);
+                if (file != 0) set_pos(PAWN_ATTACKS[WHITE][pos], pos-9);
+            }
 
             PAWN_ATTACKS[BLACK][pos] = 0ULL;
-            if (file != 7) set_pos(PAWN_ATTACKS[BLACK][pos], pos+9);
-            if (file != 0) set_pos(PAWN_ATTACKS[BLACK][pos], pos+7);
+            if (rank != 0) {
+                if (file != 7) set_pos(PAWN_ATTACKS[BLACK][pos], pos+9);
+                if (file != 0) set_pos(PAWN_ATTACKS[BLACK][pos], pos+7);
+            }
         }
     }
 

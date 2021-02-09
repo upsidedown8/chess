@@ -109,9 +109,9 @@ bool Board::from_string(const std::string &str) {
     }
 
     // halfmove clock
-    half_move_count = 0;
+    fifty_move = 0;
     while (isdigit(str[pos]))
-        half_move_count = half_move_count*10 + (str[pos++]-'0');
+        fifty_move = fifty_move*10 + (str[pos++]-'0');
     pos++;
 
     // fullmove count
@@ -169,12 +169,12 @@ UndoInfo Board::make_move(Move &move) {
     U8 start = move.get_start();
     U8 end   = move.get_end();
 
-    UndoInfo info(fifty_move, en_passant, pieces[end]);
+    UndoInfo info(castling, fifty_move, en_passant, pieces[end]);
 
-    assert(pieces[start] != None);
+    assert((pieces[start]&0b111) != None);
     assert(start != end);
     assert((pieces[start]&PIECE_COLOR) == (white_to_move?White:Black));
-    assert((pieces[end] == None) || ((pieces[start]&PIECE_COLOR) != (pieces[end]&PIECE_COLOR)));
+    assert((pieces[end]&0b111) == None || (pieces[start]&PIECE_COLOR) != (pieces[end]&PIECE_COLOR));
 
     if ((pieces[start]&0b111)==Pawn || pieces[end] != None) {
         fifty_move = 0;
@@ -207,14 +207,10 @@ UndoInfo Board::make_move(Move &move) {
             clr_pos(bitboards[(pieces[start]&PIECE_COLOR) | All], start);
             set_pos(bitboards[(pieces[start]&PIECE_COLOR) | All], end);
 
-            pieces[end] = pieces[start];
-            pieces[start] = None;
-
             int offset = start - (start%8);
             switch (move.value&MOVEFLAG_PIECE) {
                 case MOVECASTLE_QS: {
                     assert(castling & (0b01<<(2*white_to_move)));
-                    castling &= ~(0b01<<(2*white_to_move));
 
                     set_pos(bitboards[pieces[offset]], offset+3);
                     clr_pos(bitboards[pieces[offset]], offset);
@@ -228,7 +224,6 @@ UndoInfo Board::make_move(Move &move) {
                 case MOVECASTLE_KS:
                 default: {
                     assert(castling & (0b10<<(2*white_to_move)));
-                    castling &= ~(0b10<<(2*white_to_move));
 
                     set_pos(bitboards[pieces[offset+7]], offset+5);
                     clr_pos(bitboards[pieces[offset+7]], offset+7);
@@ -240,6 +235,11 @@ UndoInfo Board::make_move(Move &move) {
                     break;
                 }
             }
+            castling &= 0b1100>>(2*white_to_move);
+
+            pieces[end] = pieces[start];
+            pieces[start] = None;
+            
             en_passant = not_on_board;
             break;
         }
@@ -262,14 +262,33 @@ UndoInfo Board::make_move(Move &move) {
         }
         // capture/simple
         default: {
-            if ((pieces[start]&0b111) == Pawn && abs(end-start) == 16)
-                en_passant = (start+end)>>1;
-            else
-                en_passant = not_on_board;
-            
-            if (pieces[end] != None) {
+            en_passant = ((pieces[start]&0b111) == Pawn && abs(end-start) == 16)
+                ? ((start+end)>>1)
+                : not_on_board;
+
+            if ((pieces[end]&0b111) != None) {
                 clr_pos(bitboards[pieces[end]], end);
                 clr_pos(bitboards[(pieces[end]&PIECE_COLOR) | All], end);
+            }
+
+            // if the king moves then that player cannot castle
+            if ((pieces[start]&0b111) == King)
+                castling &= 0b1100>>(2*white_to_move);
+            // if ANY friendly piece moved FROM square, then that side cannot be castled to
+            switch (start) {
+                case a1: castling &= ~WHITE_CASTLE_QS; break;
+                case h1: castling &= ~WHITE_CASTLE_KS; break;
+                case a8: castling &= ~BLACK_CASTLE_QS; break;
+                case h8: castling &= ~BLACK_CASTLE_KS; break;
+                default: break;
+            }
+            // if ANY friendly piece TAKES ENEMY rook, then that enemy side cannot be castled to
+            switch (end) {
+                case a1: castling &= ~WHITE_CASTLE_QS; break;
+                case h1: castling &= ~WHITE_CASTLE_KS; break;
+                case a8: castling &= ~BLACK_CASTLE_QS; break;
+                case h8: castling &= ~BLACK_CASTLE_KS; break;
+                default: break;
             }
 
             clr_pos(bitboards[pieces[start]], start);
@@ -289,15 +308,21 @@ void Board::undo_move(Move &move, UndoInfo &info) {
     U8 start = move.get_start();
     U8 end   = move.get_end();
 
-    assert(pieces[start] == None);
-    assert(pieces[end] != None);
-    assert(start != end);
-    assert((pieces[end]&PIECE_COLOR) == (white_to_move?Black:White));
-
     white_to_move = !white_to_move;
+    castling = info.get_castling();
     fifty_move = info.get_fifty_move();
     en_passant = info.get_en_passant();
     int endPiece = info.get_captured_piece();
+
+    assert(start != end);
+    assert((pieces[start]&0b111) == None);
+    if ((move.value & MOVEFLAG_TYPE) == MOVETYPE_ENPASSANT) {
+        assert((pieces[end]&0b111) == None);
+        assert((pieces[en_passant]&PIECE_COLOR) == (white_to_move?White:Black));
+    } else {
+        assert((pieces[end]&0b111) != None);
+        assert((pieces[end]&PIECE_COLOR) == (white_to_move?White:Black));
+    }
 
     Colors activeColor = active_color();
     Colors enemyColor = enemy_color();
@@ -331,8 +356,6 @@ void Board::undo_move(Move &move, UndoInfo &info) {
             int offset = start - (start%8);
             switch (move.value&MOVEFLAG_PIECE) {
                 case MOVECASTLE_QS: {
-                    castling |= 0b01<<(2*white_to_move);
-
                     clr_pos(bitboards[activeColor | Rook], offset+3);
                     set_pos(bitboards[activeColor | Rook], offset);
                     clr_pos(bitboards[activeColor | All], offset+3);
@@ -344,8 +367,6 @@ void Board::undo_move(Move &move, UndoInfo &info) {
                 }
                 case MOVECASTLE_KS:
                 default: {
-                    castling |= 0b10<<(2*white_to_move);
-
                     clr_pos(bitboards[activeColor | Rook], offset+5);
                     set_pos(bitboards[activeColor | Rook], offset+7);
                     clr_pos(bitboards[activeColor | All], offset+5);
@@ -438,7 +459,7 @@ std::string Board::to_fen() {
         calc_rf(en_passant, r, f);
         ss << (char)('a' + f) << (char)('1' + r);
     }
-    ss << ' ' << (int)half_move_count;
+    ss << ' ' << (int)fifty_move;
     ss << ' ' << (int)full_move_count;
 
     return ss.str();
@@ -475,8 +496,7 @@ bool Board::operator==(Board &other) {
     return 
         fifty_move == other.fifty_move &&
         castling == other.castling &&
-        en_passant == other.castling &&
+        en_passant == other.en_passant &&
         full_move_count == other.full_move_count &&
-        half_move_count == other.half_move_count &&
         white_to_move == other.white_to_move;
 }

@@ -1,2 +1,2 @@
 # chess
- Chess library in c++
+A UCI chess engine in c++ using bitboards.

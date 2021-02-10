@@ -2,54 +2,33 @@
 
 using namespace chess_cpp;
 
-Move::Move()
-    : value(0) {}
-Move::Move(int start, int end, U8 flags) {
-    value = (end<<10) | (start<<4) | flags;
-}
-
-U8 Move::get_start() {
-    return (value & MOVEFLAG_START)>>4;
-}
-U8 Move::get_end() {
-    return (value & MOVEFLAG_END)>>10;
-}
-
-std::string Move::to_string() {
+/* -------------------------------------------------------------------------- */
+/*                                    Move                                    */
+/* -------------------------------------------------------------------------- */
+std::string chess_cpp::move_to_string(Move &move) {
     std::string result(4, '\0');
-    int r, f;
-    calc_rf(get_start(), r, f);
+    int start, end, r, f, flag;
+
+    GET_MOVE_START(move, start);
+    GET_MOVE_END(move, end);
+    
+    calc_rf(start, r, f);
     result[0] = 'a'+f;
     result[1] = '1'+r;
-    calc_rf(get_end(), r, f);
+    
+    calc_rf(end, r, f);
     result[2] = 'a'+f;
-    if ((value & MOVEFLAG_TYPE) == MOVETYPE_ENPASSANT) {
+
+    GET_MOVE_TYPE(move, flag);
+    if (flag == MOVETYPE_ENPASSANT) {
         result[3] = '1'+(r==3?2:5);
     } else {
         result[3] = '1'+r;
     }
-    if ((value & MOVEFLAG_TYPE) == MOVETYPE_PROMOTION) {
-        result += "nbrq"[value & MOVEFLAG_PIECE];
+    if (flag == MOVETYPE_PROMOTION) {
+        int piece;
+        GET_MOVE_PIECE(move, piece);
+        result += "nbrq"[piece];
     }
     return result;
-}
-
-UndoInfo::UndoInfo(int castling, int fiftyMove, int enPassant, int piece) {
-    this->castling = castling;
-    this->fifty_move = fiftyMove;
-    this->en_passant = enPassant;
-    this->captured = piece;
-}
-
-U8 UndoInfo::get_castling() {
-    return castling;
-}
-U8 UndoInfo::get_fifty_move() {
-    return fifty_move;
-}
-U8 UndoInfo::get_en_passant() {
-    return en_passant;
-}
-int UndoInfo::get_captured_piece() {
-    return captured;
 }

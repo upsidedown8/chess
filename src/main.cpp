@@ -20,16 +20,8 @@ int main(int argc, char const *argv[]) {
     //     std::cout << moves[i].to_string() << ' ';
     // }
     // std::cout << std::endl;
-    
+
     Board board;
-
-    Move move(e2, e4, 0);
-    UndoInfo info = board.make_move(move);
-
-    std::cout << board.to_string();
-
-    board.undo_move(move, info);
-    std::cout << board.to_string();
 
     return 0;
 }

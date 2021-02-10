@@ -3,341 +3,383 @@
 #include <stdexcept>
 #include <assert.h>
 
+#define ADD_MOVE_FLAGS(ptr, start, end, flags) \
+    *ptr++ = CREATE_MOVE(start, end, flags);
+
+#define ADD_MOVE(ptr, start, end) \
+    ADD_MOVE_FLAGS(ptr, start, end, 0);
+
+#define ADD_PROMOTION(ptr, start, end) \
+    ADD_MOVE_FLAGS(ptr, start, end, MOVETYPE_PROMOTION | MOVEPROMOTION_QUEEN); \
+    ADD_MOVE_FLAGS(ptr, start, end, MOVETYPE_PROMOTION | MOVEPROMOTION_ROOK); \
+    ADD_MOVE_FLAGS(ptr, start, end, MOVETYPE_PROMOTION | MOVEPROMOTION_BISHOP); \
+    ADD_MOVE_FLAGS(ptr, start, end, MOVETYPE_PROMOTION | MOVEPROMOTION_KNIGHT);
+
 using namespace chess_cpp;
 
 /* -------------------------------------------------------------------------- */
 /*                               Move Generation                              */
 /* -------------------------------------------------------------------------- */
-inline U64 get_bishop_moves(int sq, U64 occupancy) {
+inline U64 magic_bishop_moves(int sq, U64 occupancy) {
     occupancy &= BISHOP_MASKS[sq];
     int idx = (BISHOP_MAGICS[sq]*occupancy)>>BISHOP_MAGIC_SHIFTS[sq];
     return BISHOP_MOVES[sq][idx];
 }
-inline U64 get_rook_moves(int sq, U64 occupancy) {
+inline U64 magic_rook_moves(int sq, U64 occupancy) {
     occupancy &= ROOK_MASKS[sq];
     int idx = (ROOK_MAGICS[sq]*occupancy)>>ROOK_MAGIC_SHIFTS[sq];
     return ROOK_MOVES[sq][idx];
+}
+inline U64 magic_queen_moves(int sq, U64 occupancy) {
+    return magic_bishop_moves(sq, occupancy) | magic_rook_moves(sq, occupancy);
 }
 
 /* -------------------------------------------------------------------------- */
 /*                                  Attackers                                 */
 /* -------------------------------------------------------------------------- */
-inline U64 get_attackers(int square, Board &board, U64 occupancy) {
-    int color = board.white_to_move ? WHITE : BLACK;
-    // rooks, bishops and queens
-    U64 bishopQueen =
-        board.bitboards[board.enemy_color() | Bishop] |
-        board.bitboards[board.enemy_color() | Queen];
-    U64 rookQueen =
-        board.bitboards[board.enemy_color() | Rook] |
-        board.bitboards[board.enemy_color() | Queen];
-    U64 attackingPieces =
-        (get_bishop_moves(square, occupancy) & bishopQueen) |
-        (get_rook_moves(square, occupancy) & rookQueen);
-    // knights
-    attackingPieces |=
-        (KNIGHT_MOVES[square] & board.bitboards[board.enemy_color() | Knight]);
-    // kings
-    attackingPieces |=
-        (KING_MOVES[square] & board.bitboards[board.enemy_color() | King]);
-    // pawns
-    attackingPieces |=
-        (PAWN_ATTACKS[color][square] & board.bitboards[board.enemy_color() | Pawn]);
-    return attackingPieces;
-}
-inline bool is_under_attack(int square, Board &board, U64 occupancy) {
-    // knights
-    if (KNIGHT_MOVES[square] & board.bitboards[board.enemy_color() | Knight])
-        return true;
-    // kings
-    if (KING_MOVES[square] & board.bitboards[board.enemy_color() | King])
-        return true;
-    // pawns
-    if (PAWN_ATTACKS[board.white_to_move?WHITE:BLACK][square] & board.bitboards[board.enemy_color() | Pawn])
-        return true;
+template<Colors FRIENDLY>
+inline U64 find_enemy_attackers(int sq, Board &board, U64 occupancy) {
+    int color = FRIENDLY == White ? WHITE : BLACK;
+    Colors ENEMY = !FRIENDLY;
 
     // rooks, bishops and queens
-    U64 bishopQueen =
-        board.bitboards[board.enemy_color() | Bishop] |
-        board.bitboards[board.enemy_color() | Queen];
-    U64 rookQueen =
-        board.bitboards[board.enemy_color() | Rook] |
-        board.bitboards[board.enemy_color() | Queen];
-    return
-        (get_bishop_moves(square, occupancy) & bishopQueen) |
-        (get_rook_moves(square, occupancy) & rookQueen);
+    U64 bishopQueen = board.bitboards[ENEMY|Bishop] | board.bitboards[ENEMY|Queen];
+    U64 rookQueen   = board.bitboards[ENEMY|Rook  ] | board.bitboards[ENEMY|Queen];
+
+    U64 attackingPieces =
+        (magic_bishop_moves(sq, occupancy) & bishopQueen) |
+        (magic_rook_moves(sq, occupancy) & rookQueen);
+    
+    // knights
+    attackingPieces |= (       KNIGHT_MOVES[sq] & board.bitboards[ENEMY | Knight]);
+    attackingPieces |= (         KING_MOVES[sq] & board.bitboards[ENEMY | King  ]);
+    attackingPieces |= (PAWN_ATTACKS[color][sq] & board.bitboards[ENEMY | Pawn  ]);
+
+    return attackingPieces;
 }
-inline bool is_under_attack(int square, Board &board) {
-    return is_under_attack(
-        square,
-        board,
-        board.bitboards[White | All] | board.bitboards[Black | All]
-    );
+template<Colors FRIENDLY>
+inline bool is_under_attack(int sq, Board &board, U64 occupancy) {
+    Colors ENEMY = !FRIENDLY;
+    int color = FRIENDLY == White ? WHITE : BLACK;
+
+    if (       KNIGHT_MOVES[sq] & board.bitboards[ENEMY|Knight]) return true;
+    if (         KING_MOVES[sq] & board.bitboards[ENEMY|King  ]) return true;
+    if (PAWN_ATTACKS[color][sq] & board.bitboards[ENEMY|Pawn  ]) return true;
+
+    U64 bishopQueen = board.bitboards[ENEMY|Bishop] | board.bitboards[ENEMY|Queen];
+    if (magic_bishop_moves(sq, occupancy) & bishopQueen) return true;
+
+    U64 rookQueen   = board.bitboards[ENEMY|Rook  ] | board.bitboards[ENEMY|Queen];
+    return magic_rook_moves(sq, occupancy) & rookQueen;
 }
-inline bool test_en_passant(Board &board, int kingPos, int enPassantStart, int enPassantEnd) {
-    clr_pos(board.bitboards[board.enemy_color() | Pawn], enPassantEnd);
-    clr_pos(board.bitboards[board.active_color() | Pawn], enPassantStart);
-    set_pos(board.bitboards[board.active_color() | Pawn], board.en_passant);
-    board.pieces[board.en_passant] = board.active_color() | Pawn;
-    board.pieces[enPassantStart] = None;
-    board.pieces[enPassantEnd] = None;
-    board.update_bitboards();
-    bool result = !is_under_attack(kingPos, board);
-    set_pos(board.bitboards[board.enemy_color() | Pawn], enPassantEnd);
-    set_pos(board.bitboards[board.active_color() | Pawn], enPassantStart);
-    clr_pos(board.bitboards[board.active_color() | Pawn], board.en_passant);
-    board.pieces[board.en_passant] = None;
-    board.pieces[enPassantStart] = board.active_color() | Pawn;
-    board.pieces[enPassantEnd] = board.enemy_color() | Pawn;
-    board.update_bitboards();
+
+/* -------------------------------------------------------------------------- */
+/*                                 En Passant                                 */
+/* -------------------------------------------------------------------------- */
+template<Colors FRIENDLY>
+bool validate_en_passant(Board &board, int kingPos, int start, int end, U64 occupancy) {
+    // is_under_attack() only uses bitboards
+    Colors ENEMY = !FRIENDLY;
+
+    // update pawn bitboards
+    clr_pos(board.bitboards[ENEMY|Pawn], end);
+    clr_pos(board.bitboards[FRIENDLY|Pawn], start);
+    set_pos(board.bitboards[FRIENDLY|Pawn], board.en_passant);
+    // update global bitboards
+    clr_pos(board.bitboards[ENEMY|All], end);
+    clr_pos(board.bitboards[FRIENDLY|All], start);
+    set_pos(board.bitboards[FRIENDLY|All], board.en_passant);
+
+    clr_pos(occupancy, start);
+    set_pos(occupancy, board.en_passant);
+    clr_pos(occupancy, end);
+
+    bool result = !is_under_attack<FRIENDLY>(kingPos, board, occupancy);
+
+    // update pawn bitboards
+    set_pos(board.bitboards[ENEMY|Pawn], end);
+    set_pos(board.bitboards[FRIENDLY|Pawn], start);
+    clr_pos(board.bitboards[FRIENDLY|Pawn], board.en_passant);
+    // update global bitboards
+    set_pos(board.bitboards[ENEMY|All], end);
+    set_pos(board.bitboards[FRIENDLY|All], start);
+    clr_pos(board.bitboards[FRIENDLY|All], board.en_passant);
+
     return result;
 }
 
-void gen_pawn_moves(Board &board, Move *&ptr, U64 occupancy, U64 pinned, U64 legalCaptures = FULL_BB, U64 blockers = FULL_BB) {
-    U64 enemy = board.bitboards[board.enemy_color() | All];
-    U64 pawns = board.bitboards[board.active_color() | Pawn] & ~pinned;
+/* -------------------------------------------------------------------------- */
+/*                                    Moves                                   */
+/* -------------------------------------------------------------------------- */
+template<Colors FRIENDLY, bool isLeftCapture>
+void gen_pawn_captures(Board &board, Move *&ptr, U64 occupancy, U64 pinned, U64 legalCaptures, int kingPos) {
+    Colors ENEMY = !FRIENDLY;
 
-    int end;
-    int offset = board.white_to_move
-        ?  8
-        : -8;
+    U64 enemy = board.bitboards[ENEMY|All];
+    U64 pawns = board.bitboards[FRIENDLY|Pawn] & ~pinned;
+    int end, offset = FRIENDLY == White ? (isLeftCapture ? 9 : 7) : (isLeftCapture ? -7 : -9);
+
+    U64 fileMask = NOT_FILES[(isLeftCapture ? FileA : FileH)];
+    U64 captures = FRIENDLY == White
+        ? (pawns & fileMask) >> (isLeftCapture ? 9 : 7)
+        : (pawns & fileMask) << (isLeftCapture ? 7 : 9);
+    
+    if (board.en_passant != not_on_board) {
+        int enPassantEnd = board.en_passant + (FRIENDLY == White ? 8 : -8);
+        if (is_set(captures, board.en_passant) &&
+            validate_en_passant<FRIENDLY>(board, kingPos, offset+board.en_passant, enPassantEnd, occupancy))
+            ADD_MOVE_FLAGS(ptr, offset+board.en_passant, enPassantEnd, MOVETYPE_ENPASSANT);
+    }
+
+    captures &= legalCaptures & enemy;
+
+    U64 nonPromotionCaps = captures & NOT_RANKS[FRIENDLY == White ? Rank8 : Rank1];
+    while (nonPromotionCaps) {
+        end = pop_lsb(nonPromotionCaps);
+        ADD_MOVE(ptr, end+offset, end);
+    }
+
+    U64 promotionCaps = captures & RANKS[FRIENDLY == White ? Rank8 : Rank1];
+    while (promotionCaps) {
+        end = pop_lsb(promotionCaps);
+        ADD_PROMOTION(ptr, offset+end, end);
+    }
+}
+template<Colors FRIENDLY>
+void gen_pawn_pushes(Board &board, Move *&ptr, U64 occupancy, U64 pinned, U64 blockers) {
+    U64 pawns = board.bitboards[FRIENDLY|Pawn] & ~pinned;
+
+    int end, offset = FRIENDLY == White ? 8 : -8;
     int doubleOffset = offset << 1;
 
-    // Single square moves
-    // find any single square forward moves that do not collide
-    U64 pawnSingleMoves = board.white_to_move
-        ? pawns >> 8
-        : pawns << 8;
-    pawnSingleMoves &= ~occupancy;
+    U64 pawnSingleMoves = (FRIENDLY == White ? pawns >> 8 : pawns << 8) & ~occupancy;
 
-    // Non-Promotion moves
-    // find any single square moves that do not end on the last rank
-    U64 nonPromotionMoves = blockers & pawnSingleMoves & NOT_RANKS[board.white_to_move ? Rank8 : Rank1];
+    U64 nonPromotionMoves = blockers & pawnSingleMoves & NOT_RANKS[FRIENDLY == White ? Rank8 : Rank1];
     while (nonPromotionMoves) {
         end = pop_lsb(nonPromotionMoves);
-        *ptr++ = Move(offset+end, end, 0);
+        ADD_MOVE(ptr, offset+end, end);
     }
 
-    // Promotion moves
-    // find any single square moves that end on the last rank
-    U64 promotionMoves = blockers & pawnSingleMoves & RANKS[board.white_to_move ? Rank8 : Rank1];
+    U64 promotionMoves = blockers & pawnSingleMoves & RANKS[FRIENDLY == White ? Rank8 : Rank1];
     while (promotionMoves) {
         end = pop_lsb(promotionMoves);
-        *ptr++ = Move(offset+end, end, MOVETYPE_PROMOTION | MOVEPROMOTION_PAWN);
-        *ptr++ = Move(offset+end, end, MOVETYPE_PROMOTION | MOVEPROMOTION_KNIGHT);
-        *ptr++ = Move(offset+end, end, MOVETYPE_PROMOTION | MOVEPROMOTION_BISHOP);
-        *ptr++ = Move(offset+end, end, MOVETYPE_PROMOTION | MOVEPROMOTION_QUEEN);
+        ADD_PROMOTION(ptr, offset+end, end);
     }
 
-    // Double square moves
-    // find pawns that originated from the start square, and are already validated for 1 square move.
-    pawnSingleMoves &= RANKS[board.white_to_move ? Rank3 : Rank6];
-    // of the single moves that were valid, move them one more square and check if they are valid.
-    U64 pawnDoubleMoves = board.white_to_move
+    pawnSingleMoves &= RANKS[FRIENDLY == White ? Rank3 : Rank6];
+    U64 pawnDoubleMoves = FRIENDLY == White
         ? pawnSingleMoves >> 8
         : pawnSingleMoves << 8;
     pawnDoubleMoves &= ~occupancy & blockers;
     while (pawnDoubleMoves) {
         end = pop_lsb(pawnDoubleMoves);
-        *ptr++ = Move(doubleOffset+end, end, 0);
-    }
-
-    // Captures
-    U64 enPassantCaptures;
-    int enPassantEnd = board.en_passant + (board.white_to_move ? 8 : -8);
-    U64 kingBitBoard = board.bitboards[board.active_color() | King];
-    int kingPos = pop_lsb(kingBitBoard);
-
-    U64 captures, nonPromotionCaps, promotionCaps;
-    // any pawn not on file A could potentially left capture
-    offset = board.white_to_move
-        ?  9
-        : -7;
-    captures = board.white_to_move
-        ? (pawns & NOT_FILES[FileA]) >> 9
-        : (pawns & NOT_FILES[FileA]) << 7;
-    // Check for left capture En Passant
-    if (board.en_passant != not_on_board) {
-        enPassantCaptures = captures & SET_BIT_TABLE[board.en_passant];
-        if (enPassantCaptures && test_en_passant(board, kingPos, offset+board.en_passant, enPassantEnd))
-            *ptr++ = Move(offset+board.en_passant, enPassantEnd, MOVETYPE_ENPASSANT);
-    }
-
-    captures &= legalCaptures & enemy;
-    // Non-Promotion captures
-    nonPromotionCaps = captures & NOT_RANKS[board.white_to_move ? Rank8 : Rank1];
-    while (nonPromotionCaps) {
-        end = pop_lsb(nonPromotionCaps);
-        *ptr++ = Move(end+offset, end, 0);
-    }
-    // Promotion captures
-    promotionCaps = captures & RANKS[board.white_to_move ? Rank8 : Rank1];
-    while (promotionCaps) {
-        end = pop_lsb(promotionCaps);
-        *ptr++ = Move(offset+end, end, MOVETYPE_PROMOTION | MOVEPROMOTION_PAWN);
-        *ptr++ = Move(offset+end, end, MOVETYPE_PROMOTION | MOVEPROMOTION_KNIGHT);
-        *ptr++ = Move(offset+end, end, MOVETYPE_PROMOTION | MOVEPROMOTION_BISHOP);
-        *ptr++ = Move(offset+end, end, MOVETYPE_PROMOTION | MOVEPROMOTION_QUEEN);
-    }
-
-    // any pawn not on file H could potentially right capture
-    offset = board.white_to_move
-        ?  7
-        : -9;
-    captures = board.white_to_move
-        ? (pawns & NOT_FILES[FileH]) >> 7
-        : (pawns & NOT_FILES[FileH]) << 9;
-    // Check for right capture En Passant
-    if (board.en_passant != not_on_board) {
-        enPassantCaptures = captures & SET_BIT_TABLE[board.en_passant];
-        if (enPassantCaptures && test_en_passant(board, kingPos, offset+board.en_passant, enPassantEnd))
-            *ptr++ = Move(offset+board.en_passant, enPassantEnd, MOVETYPE_ENPASSANT);
-    }
-    captures &= legalCaptures & enemy;
-    // Non-Promotion captures
-    nonPromotionCaps = captures & NOT_RANKS[board.white_to_move ? Rank8 : Rank1];
-    while (nonPromotionCaps) {
-        end = pop_lsb(nonPromotionCaps);
-        *ptr++ = Move(end+offset, end, 0);
-    }
-    // Promotion Captures
-    promotionCaps = captures & RANKS[board.white_to_move ? Rank8 : Rank1];
-    while (promotionCaps) {
-        end = pop_lsb(promotionCaps);
-        *ptr++ = Move(offset+end, end, MOVETYPE_PROMOTION | MOVEPROMOTION_PAWN);
-        *ptr++ = Move(offset+end, end, MOVETYPE_PROMOTION | MOVEPROMOTION_KNIGHT);
-        *ptr++ = Move(offset+end, end, MOVETYPE_PROMOTION | MOVEPROMOTION_BISHOP);
-        *ptr++ = Move(offset+end, end, MOVETYPE_PROMOTION | MOVEPROMOTION_QUEEN);
+        ADD_MOVE(ptr, doubleOffset+end, end);
     }
 }
-void gen_knight_moves(Board &board, Move *&ptr, U64 occupancy, U64 pinned, U64 movesMask = FULL_BB) {
-    U64 nonFriendly = ~board.bitboards[board.active_color() | All];
-    // a pinned knight cannot move
-    U64 knights = board.bitboards[board.active_color() | Knight] & ~pinned;
-    int start;
+template<Colors FRIENDLY>
+void gen_pawn_moves(Board &board, Move *&ptr, U64 occupancy, U64 pinned, U64 legalCaptures, U64 blockers, int kingPos) {
+    gen_pawn_captures<FRIENDLY, true>(board, ptr, occupancy, pinned, legalCaptures, kingPos);
+    gen_pawn_captures<FRIENDLY, false>(board, ptr, occupancy, pinned, legalCaptures, kingPos);
+    gen_pawn_pushes<FRIENDLY>(board, ptr, occupancy, pinned, blockers);
+}
+template<Colors FRIENDLY>
+void gen_knight_moves(Board &board, Move *&ptr, U64 pinned, U64 movesMask) {
+    U64 knights = board.bitboards[FRIENDLY|Knight] & ~pinned;
+    U64 mask = movesMask & ~board.bitboards[FRIENDLY|All];
+
+    int start, end;
     while (knights) {
         start = pop_lsb(knights);
-
-        U64 knightsMoves = KNIGHT_MOVES[start] & nonFriendly & movesMask;
-
-        while (knightsMoves)
-            *ptr++ = Move(start, pop_lsb(knightsMoves), 0);
+        U64 moves = KNIGHT_MOVES[start] & mask;
+        while (moves) {
+            end = pop_lsb(moves);
+            ADD_MOVE(ptr, start, end);
+        }
     }
 }
-void gen_bishop_moves(Board &board, Move *&ptr, U64 occupancy, U64 pinned, U64 movesMask = FULL_BB) {
-    U64 nonFriendly = ~board.bitboards[board.active_color() | All];
-    // pinned moves are calculated elsewhere
-    U64 bishops = board.bitboards[board.active_color() | Bishop] & ~pinned;
-    U64 bishopMoves;
-    int start;
-
+template<Colors FRIENDLY>
+void gen_bishop_moves(Board &board, Move *&ptr, U64 occupancy, U64 pinned, U64 movesMask) {
+    U64 bishops = board.bitboards[FRIENDLY|Bishop] & ~pinned;
+    U64 mask = movesMask & ~board.bitboards[FRIENDLY|All];
+    
+    int start, end;
     while (bishops) {
         start = pop_lsb(bishops);
-
-        // generate legal moves
-        bishopMoves = get_bishop_moves(start, occupancy) & nonFriendly & movesMask;
-
-        while (bishopMoves)
-            *ptr++ = Move(start, pop_lsb(bishopMoves), 0);
+        U64 moves = magic_bishop_moves(start, occupancy) & mask;
+        while (moves) {
+            end = pop_lsb(moves);
+            ADD_MOVE(ptr, start, end);
+        }
     }
 }
-void gen_rook_moves(Board &board, Move *&ptr, U64 occupancy, U64 pinned, U64 movesMask = FULL_BB) {
-    U64 nonFriendly = ~board.bitboards[board.active_color() | All];
-    // pinned moves are calculated elsewhere
-    U64 rooks = board.bitboards[board.active_color() | Rook] & ~pinned;
-    U64 rookMoves;
-    int start;
+template<Colors FRIENDLY>
+void gen_rook_moves(Board &board, Move *&ptr, U64 occupancy, U64 pinned, U64 movesMask) {
+    U64 rooks = board.bitboards[FRIENDLY|Rook] & ~pinned;
+    U64 mask = movesMask & ~board.bitboards[FRIENDLY|All];
 
+    int start, end;
     while (rooks) {
         start = pop_lsb(rooks);
-
-        rookMoves = get_rook_moves(start, occupancy) & nonFriendly & movesMask;
-
-        while (rookMoves)
-            *ptr++ = Move(start, pop_lsb(rookMoves), 0);
+        U64 moves = magic_rook_moves(start, occupancy) & mask;
+        while (moves) {
+            end = pop_lsb(moves);
+            ADD_MOVE(ptr, start, end);
+        }
     }
 }
-void gen_queen_moves(Board &board, Move *&ptr, U64 occupancy, U64 pinned, U64 movesMask = FULL_BB) {
-    U64 nonFriendly = ~board.bitboards[board.active_color() | All];
-    // pinned moves are calculated elsewhere
-    U64 queens = board.bitboards[board.active_color() | Queen] & ~pinned;
-    U64 queenMoves;
-    int start;
+template<Colors FRIENDLY>
+void gen_queen_moves(Board &board, Move *&ptr, U64 occupancy, U64 pinned, U64 movesMask) {
+    U64 queens = board.bitboards[FRIENDLY|Queen] & ~pinned;
+    U64 mask = movesMask & ~board.bitboards[FRIENDLY|All];
 
+    int start, end;
     while (queens) {
         start = pop_lsb(queens);
-
-        queenMoves =
-            get_rook_moves(start, occupancy) |
-            get_bishop_moves(start, occupancy);
-        queenMoves &= nonFriendly & movesMask;
-
-        while (queenMoves)
-            *ptr++ = Move(start, pop_lsb(queenMoves), 0);
+        U64 moves = magic_queen_moves(start, occupancy) & mask;
+        while (moves) {
+            end = pop_lsb(moves);
+            ADD_MOVE(ptr, start, end);
+        }
     }
 }
+template<Colors FRIENDLY>
 void gen_king_moves(Board &board, Move *&ptr, U64 occupancy) {
-    U64 kings = board.bitboards[board.active_color() | King];
-    occupancy &= ~kings;
-    int start = pop_lsb(kings), end;
+    occupancy &= ~board.bitboards[FRIENDLY|King];
+    int end, start = lsb_idx(board.bitboards[FRIENDLY|King]);
 
-    U64 kingMoves = KING_MOVES[start] & ~board.bitboards[board.active_color() | All];
+    U64 kingMoves = KING_MOVES[start] & ~board.bitboards[FRIENDLY|All];
 
     while (kingMoves) {
         end = pop_lsb(kingMoves);
-        if (!is_under_attack(end, board, occupancy))
-            *ptr++ = Move(start, end, 0);
+        if (!is_under_attack<FRIENDLY>(end, board, occupancy))
+            ADD_MOVE(ptr, start, end);
     }
 }
-void gen_castling(Board &board, Move *&ptr, U64 occupancy) {
-    // a square is blocked if it has a piece on it or is under attack
-    if (board.white_to_move) {
+template<Colors FRIENDLY>
+void gen_castling_moves(Board &board, Move *&ptr, U64 occupancy) {
+    if (FRIENDLY == White) {
         if (board.castling & WHITE_CASTLE_QS) {
             if (!((occupancy & RANKS[Rank1] & FILES[FileB | FileC | FileD]) ||
-                is_under_attack(e1, board) ||
-                is_under_attack(d1, board) ||
-                is_under_attack(c1, board))) {
-                    *ptr++ = Move(e1, c1, MOVETYPE_CASTLE | MOVECASTLE_QS);
+                is_under_attack<White>(d1, board, occupancy) ||
+                is_under_attack<White>(c1, board, occupancy))) {
+                    ADD_MOVE_FLAGS(ptr, e1, c1, MOVETYPE_CASTLE | MOVECASTLE_QS);
             }
         }
         if (board.castling & WHITE_CASTLE_KS) {
             if (!((occupancy & RANKS[Rank1] & FILES[FileF | FileG]) ||
-                is_under_attack(e1, board) ||
-                is_under_attack(f1, board) ||
-                is_under_attack(g1, board))) {
-                    *ptr++ = Move(e1, g1, MOVETYPE_CASTLE | MOVECASTLE_KS);
+                is_under_attack<White>(f1, board, occupancy) ||
+                is_under_attack<White>(g1, board, occupancy))) {
+                    ADD_MOVE_FLAGS(ptr, e1, g1, MOVETYPE_CASTLE | MOVECASTLE_KS);
             }
         }
-    }
-    else {
+    } else {
         if (board.castling & BLACK_CASTLE_QS) {
             if (!((occupancy & RANKS[Rank8] & FILES[FileB | FileC | FileD]) ||
-                is_under_attack(e8, board) ||
-                is_under_attack(d8, board) ||
-                is_under_attack(c8, board))) {
-                    *ptr++ = Move(e8, c8, MOVETYPE_CASTLE | MOVECASTLE_QS);
+                is_under_attack<Black>(d8, board, occupancy) ||
+                is_under_attack<Black>(c8, board, occupancy))) {
+                    ADD_MOVE_FLAGS(ptr, e8, c8, MOVETYPE_CASTLE | MOVECASTLE_QS);
             }
         }
         if (board.castling & BLACK_CASTLE_KS) {
             if (!((occupancy & RANKS[Rank8] & FILES[FileF | FileG]) ||
-                is_under_attack(e8, board) ||
-                is_under_attack(f8, board) ||
-                is_under_attack(g8, board))) {
-                    *ptr++ = Move(e8, g8, MOVETYPE_CASTLE | MOVECASTLE_KS);
+                is_under_attack<Black>(f8, board, occupancy) ||
+                is_under_attack<Black>(g8, board, occupancy))) {
+                    ADD_MOVE_FLAGS(ptr, e8, g8, MOVETYPE_CASTLE | MOVECASTLE_KS);
             }
         }
     }
 }
 
+/* -------------------------------------------------------------------------- */
+/*                                Pinned pieces                               */
+/* -------------------------------------------------------------------------- */
+template<Colors FRIENDLY, bool isBishop>
+void gen_pinned_piece_moves(Move *&ptr, int pinnedPos, U64 occupancy, U64 mask) {
+    U64 moves = (isBishop
+        ? magic_bishop_moves(pinnedPos, occupancy)
+        : magic_rook_moves(pinnedPos, occupancy))
+        & mask;
+
+    int end;
+    while (moves) {
+        end = pop_lsb(moves);
+        ADD_MOVE(ptr, pinnedPos, end);
+    }
+}
+template<Colors FRIENDLY>
+void gen_pinned_pawn_pushes(Move *&ptr, int pinnedPos, U64 occupancy, U64 mask) {
+    U64 pawns = SET_BIT_TABLE[pinnedPos];
+
+    int end;
+
+    // Single square moves
+    U64 pawnSingleMoves = (FRIENDLY == White ? pawns >> 8 : pawns << 8) & ~occupancy;
+
+    // Promotion moves
+    U64 promotionMoves = pawnSingleMoves & RANKS[FRIENDLY == White ? Rank8 : Rank1] & mask;
+    if (promotionMoves) {
+        end = pop_lsb(promotionMoves);
+        ADD_PROMOTION(ptr, pinnedPos, end);
+    } else {
+        U64 nonPromotionMoves = pawnSingleMoves & NOT_RANKS[FRIENDLY == White ? Rank8 : Rank1] & mask;
+        if (nonPromotionMoves) {
+            end = pop_lsb(nonPromotionMoves);
+            ADD_MOVE(ptr, pinnedPos, end);
+        }
+
+        // Double square moves
+        pawnSingleMoves &= RANKS[FRIENDLY == White ? Rank3 : Rank6];
+        U64 pawnDoubleMoves = FRIENDLY == White ? pawnSingleMoves >> 8 : pawnSingleMoves << 8;
+        pawnDoubleMoves &= mask & ~occupancy;
+        if (pawnDoubleMoves) {
+            end = pop_lsb(pawnDoubleMoves);
+            ADD_MOVE(ptr, pinnedPos, end);
+        }
+    }
+}
+template<Colors FRIENDLY, bool isLeftCapture>
+void gen_pinned_pawn_captures(Move *&ptr, int pinnedPos, U64 occupancy, U64 mask, int kingPos, Board &board) {
+    Colors ENEMY = !FRIENDLY;
+    
+    U64 enemy = board.bitboards[ENEMY|All];
+    U64 pawns = SET_BIT_TABLE[pinnedPos];
+    int end, offset = FRIENDLY == White ? (isLeftCapture ? 9 : 7) : (isLeftCapture ? -7 : -9);
+    
+    U64 fileMask = NOT_FILES[(isLeftCapture ? FileA : FileH)];
+    U64 captures = FRIENDLY == White
+        ? (pawns & fileMask) >> (isLeftCapture ? 9 : 7)
+        : (pawns & fileMask) << (isLeftCapture ? 7 : 9);
+
+    captures &= mask;
+    
+    // Promotion captures
+    U64 promotionCaps = captures & RANKS[FRIENDLY == White ? Rank8 : Rank1] & enemy;
+    if (promotionCaps) {
+        int end = pop_lsb(promotionCaps);
+        ADD_PROMOTION(ptr, pinnedPos, end);
+    } else {
+        if (board.en_passant != not_on_board) {
+            int enPassantEnd = board.en_passant + (FRIENDLY == White ? 8 : -8);
+            if (is_set(captures, board.en_passant) &&
+                validate_en_passant<FRIENDLY>(board, kingPos, pinnedPos, enPassantEnd, occupancy))
+                    ADD_MOVE_FLAGS(ptr, pinnedPos, enPassantEnd, MOVETYPE_ENPASSANT);
+        }
+
+        U64 nonPromotionCaps = captures & NOT_RANKS[FRIENDLY == White ? Rank8 : Rank1] & enemy;
+        if (nonPromotionCaps) {
+            end = pop_lsb(nonPromotionCaps);
+            ADD_MOVE(ptr, pinnedPos, end);
+        }
+    }
+}
+template<Colors FRIENDLY>
 void gen_pinned_moves(Board &board, Move *&ptr, U64 occupancy, U64 legalCaptures, U64 blockers, int kingPos, int pinnedPos, int attackerPos) {
     U64 movesMask = legalCaptures | blockers;
-    U64 pinMoveMask = (SLIDER_RANGE[attackerPos][kingPos] & ~board.bitboards[board.active_color() | All]) | SET_BIT_TABLE[attackerPos];
-    U64 enemy = board.bitboards[board.enemy_color() | All];
+    U64 pinMoveMask = (SLIDER_RANGE[attackerPos][kingPos] & ~board.bitboards[FRIENDLY|All]) | SET_BIT_TABLE[attackerPos];
+    U64 mask = movesMask & pinMoveMask;
 
     switch (board.pieces[pinnedPos]&0b111) {
         case Pawn: {
-            U64 pawns = SET_BIT_TABLE[pinnedPos];
-
             int kingR, kingF, pinnedR, pinnedF;
             calc_rf(kingPos, kingR, kingF);
             calc_rf(pinnedPos, pinnedR, pinnedF);
@@ -347,83 +389,14 @@ void gen_pinned_moves(Board &board, Move *&ptr, U64 occupancy, U64 legalCaptures
                 break;
             } else if (kingF == pinnedF) {
                 // pinned down a file, so only 1 square or 2 squares forward 
-
-                // Single square moves
-                U64 pawnSingleMoves = (board.white_to_move ? pawns >> 8 : pawns << 8) & ~occupancy;
-                U64 nonPromotionMoves = pawnSingleMoves & NOT_RANKS[board.white_to_move ? Rank8 : Rank1] & pinMoveMask & blockers;
-                if (nonPromotionMoves) *ptr++ = Move(pinnedPos, pop_lsb(nonPromotionMoves), 0);
-
-                // Promotion moves
-                U64 promotionMoves = pawnSingleMoves & RANKS[board.white_to_move ? Rank8 : Rank1] & pinMoveMask & blockers;
-                if (promotionMoves) {
-                    int end = pop_lsb(promotionMoves);
-                    *ptr++ = Move(pinnedPos, end, MOVETYPE_PROMOTION | MOVEPROMOTION_PAWN);
-                    *ptr++ = Move(pinnedPos, end, MOVETYPE_PROMOTION | MOVEPROMOTION_KNIGHT);
-                    *ptr++ = Move(pinnedPos, end, MOVETYPE_PROMOTION | MOVEPROMOTION_BISHOP);
-                    *ptr++ = Move(pinnedPos, end, MOVETYPE_PROMOTION | MOVEPROMOTION_QUEEN);
-                }
-
-                // Double square moves
-                // find pawns that originated from the start square, and are already validated for 1 square move.
-                pawnSingleMoves &= RANKS[board.white_to_move ? Rank3 : Rank6];
-                // of the single moves that were valid, move them one more square and check if they are valid.
-                U64 pawnDoubleMoves = board.white_to_move ? pawnSingleMoves >> 8 : pawnSingleMoves << 8;
-                pawnDoubleMoves &= pinMoveMask & blockers & ~occupancy;
-                if (pawnDoubleMoves) *ptr++ = Move(pinnedPos, pop_lsb(pawnDoubleMoves), 0);
+                gen_pinned_pawn_pushes<FRIENDLY>(ptr, pinnedPos, occupancy, pinMoveMask & blockers);
                 break;
             } else {
                 assert(abs(kingR - pinnedR) == abs(kingF - pinnedF));
-
-                // pinned down a diagonal, only captures
-                U64 captures, nonPromotionCaps, promotionCaps;
-                U64 enPassantCaptures;
-                int enPassantEnd = board.en_passant + (board.white_to_move ? 8 : -8);
-
-                captures = board.white_to_move ? (pawns & NOT_FILES[FileA]) >> 9 : (pawns & NOT_FILES[FileA]) << 7;
-                captures &= legalCaptures & pinMoveMask;                
-                // Check for left capture En Passant
-                if (board.en_passant != not_on_board) {
-                    enPassantCaptures = captures & SET_BIT_TABLE[board.en_passant];
-                    if (enPassantCaptures && test_en_passant(board, kingPos, pinnedPos, enPassantEnd))
-                        *ptr++ = Move(pinnedPos, enPassantEnd, MOVETYPE_ENPASSANT);
-                }
-                captures &= enemy;
-                // Non-Promotion captures
-                nonPromotionCaps = captures & NOT_RANKS[board.white_to_move ? Rank8 : Rank1];
-                if (nonPromotionCaps) *ptr++ = Move(pinnedPos, pop_lsb(nonPromotionCaps), 0);
-                // Promotion captures
-                promotionCaps = captures & RANKS[board.white_to_move ? Rank8 : Rank1];
-                if (promotionCaps) {
-                    int end = pop_lsb(promotionCaps);
-                    *ptr++ = Move(pinnedPos, end, MOVETYPE_PROMOTION | MOVEPROMOTION_PAWN);
-                    *ptr++ = Move(pinnedPos, end, MOVETYPE_PROMOTION | MOVEPROMOTION_KNIGHT);
-                    *ptr++ = Move(pinnedPos, end, MOVETYPE_PROMOTION | MOVEPROMOTION_BISHOP);
-                    *ptr++ = Move(pinnedPos, end, MOVETYPE_PROMOTION | MOVEPROMOTION_QUEEN);
-                }
-                captures = board.white_to_move
-                    ? (pawns & NOT_FILES[FileH]) >> 7
-                    : (pawns & NOT_FILES[FileH]) << 9;
-                captures &= legalCaptures & pinMoveMask;
-                // Check for right capture En Passant
-                if (board.en_passant != not_on_board) {
-                    enPassantCaptures = captures & SET_BIT_TABLE[board.en_passant];
-                    if (enPassantCaptures && test_en_passant(board, kingPos, pinnedPos, enPassantEnd))
-                        *ptr++ = Move(pinnedPos, enPassantEnd, MOVETYPE_ENPASSANT);
-                }
-                captures &= enemy;
-                // Non-Promotion captures
-                nonPromotionCaps = captures & NOT_RANKS[board.white_to_move ? Rank8 : Rank1];
-                if (nonPromotionCaps) *ptr++ = Move(pinnedPos, pop_lsb(nonPromotionCaps), 0);
-                // Promotion Captures
-                promotionCaps = captures & RANKS[board.white_to_move ? Rank8 : Rank1];
-                if (promotionCaps) {
-                    int end = pop_lsb(promotionCaps);
-                    *ptr++ = Move(pinnedPos, end, MOVETYPE_PROMOTION | MOVEPROMOTION_PAWN);
-                    *ptr++ = Move(pinnedPos, end, MOVETYPE_PROMOTION | MOVEPROMOTION_KNIGHT);
-                    *ptr++ = Move(pinnedPos, end, MOVETYPE_PROMOTION | MOVEPROMOTION_BISHOP);
-                    *ptr++ = Move(pinnedPos, end, MOVETYPE_PROMOTION | MOVEPROMOTION_QUEEN);
-                }
+                gen_pinned_pawn_captures<FRIENDLY, true>(ptr, pinnedPos, occupancy, legalCaptures & pinMoveMask, kingPos, board);
+                gen_pinned_pawn_captures<FRIENDLY, false>(ptr, pinnedPos, occupancy, legalCaptures & pinMoveMask, kingPos, board);
             }
+
             break;
         }
         case Knight: {
@@ -431,92 +404,76 @@ void gen_pinned_moves(Board &board, Move *&ptr, U64 occupancy, U64 legalCaptures
             break;
         }
         case Bishop: {
-            U64 bishopMoves = get_bishop_moves(pinnedPos, occupancy) & movesMask & pinMoveMask;
-
-            while (bishopMoves)
-                *ptr++ = Move(pinnedPos, pop_lsb(bishopMoves), 0);
-            
+            gen_pinned_piece_moves<FRIENDLY, true>(ptr, pinnedPos, occupancy, mask);
             break;
         }
         case Rook: {
-            U64 rookMoves = get_rook_moves(pinnedPos, occupancy) & movesMask & pinMoveMask;
-
-            while (rookMoves)
-                *ptr++ = Move(pinnedPos, pop_lsb(rookMoves), 0);
-            
+            gen_pinned_piece_moves<FRIENDLY, false>(ptr, pinnedPos, occupancy, mask);
             break;
         }
         case Queen: {
-            U64 queenMoves = (get_rook_moves(pinnedPos, occupancy) | get_bishop_moves(pinnedPos, occupancy)) & movesMask & pinMoveMask;
-
-            while (queenMoves)
-                *ptr++ = Move(pinnedPos, pop_lsb(queenMoves), 0);
+            gen_pinned_piece_moves<FRIENDLY, true>(ptr, pinnedPos, occupancy, mask);
+            gen_pinned_piece_moves<FRIENDLY, false>(ptr, pinnedPos, occupancy, mask);
             break;
         }
-        case King:
+
         default: {
             throw std::runtime_error("The King cannot be pinned");
         }
     }
 }
-
-U64 gen_pinned_pieces(Board &board, Move *&ptr, int kingPos, U64 occupancy, U64 enemy, U64 attackingKing, U64 legalCaptures, U64 blockers) {
-    // calculate pinned pieces
-    U64 bishopQueen =
-        board.bitboards[board.enemy_color() | Bishop] |
-        board.bitboards[board.enemy_color() | Queen];
-    U64 rookQueen =
-        board.bitboards[board.enemy_color() | Rook] |
-        board.bitboards[board.enemy_color() | Queen];
-
-    U64 bishopPinnedPieces, rookPinnedPieces;
-    U64 occupied, pinMoveMask, friendly = board.bitboards[board.active_color() | All];
-    int start, pinnedPos;
+template<Colors FRIENDLY, bool isBishop>
+U64 gen_pin_attackers(Board &board, Move *&ptr, int kingPos, U64 occupancy, U64 checkers, U64 legalCaptures, U64 blockers) {
+    Colors ENEMY = !FRIENDLY;
     
-    // pieces with a line on the king that are not attacking it
-    bishopPinnedPieces = 0ULL;
-    U64 bishopAttackers = (get_bishop_moves(kingPos, enemy) & bishopQueen);
-    bishopAttackers &= ~attackingKing;
-    while (bishopAttackers) {
-        start = pop_lsb(bishopAttackers);
-        U64 occupied = SLIDER_RANGE[start][kingPos] & friendly;
-        pinnedPos = pop_lsb(occupied);
-        // only one piece blocking therefore there is a pin
-        if (!occupied) {
-            gen_pinned_moves(board, ptr, occupancy, legalCaptures, blockers, kingPos, pinnedPos, start);
-            set_pos(bishopPinnedPieces, pinnedPos);
-        }
-    }
+    int start, pinnedPos;
 
-    // pieces with a line on the king that are not attacking it
-    rookPinnedPieces = 0ULL;
-    U64 rookAttackers = (get_rook_moves(kingPos, enemy) & rookQueen);
-    rookAttackers &= ~attackingKing;
-    while (rookAttackers) {
-        start = pop_lsb(rookAttackers);
-        U64 occupied = SLIDER_RANGE[start][kingPos] & friendly;
+    U64 pieceMask =
+        board.bitboards[ENEMY|Queen] |
+        board.bitboards[ENEMY|(isBishop?Bishop:Rook)];
+    U64 attackers =
+        (isBishop
+            ? magic_bishop_moves(kingPos, board.bitboards[ENEMY|All])
+            : magic_rook_moves(kingPos, board.bitboards[ENEMY|All]))
+        & pieceMask
+        & ~checkers;
+    U64 pinnedPieces = 0ULL;
+
+    while (attackers) {
+        start = pop_lsb(attackers);
+        U64 occupied = SLIDER_RANGE[start][kingPos] & board.bitboards[FRIENDLY|All];
         pinnedPos = pop_lsb(occupied);
         // only one piece blocking therefore there is a pin
         if (!occupied) {
-            gen_pinned_moves(board, ptr, occupancy, legalCaptures, blockers, kingPos, pinnedPos, start);
-            set_pos(rookPinnedPieces, pinnedPos);
+            gen_pinned_moves<FRIENDLY>(board, ptr, occupancy, legalCaptures, blockers, kingPos, pinnedPos, start);
+            set_pos(pinnedPieces, pinnedPos);
         }
     }
-    return bishopPinnedPieces | rookPinnedPieces;
+    return pinnedPieces;
+}
+template<Colors FRIENDLY>
+U64 gen_pinned_pieces(Board &board, Move *&ptr, int kingPos, U64 occupancy, U64 checkers, U64 legalCaptures, U64 blockers) {
+    return
+        gen_pin_attackers<FRIENDLY, true>(board, ptr, kingPos, occupancy, checkers, legalCaptures, blockers) |
+        gen_pin_attackers<FRIENDLY, false>(board, ptr, kingPos, occupancy, checkers, legalCaptures, blockers);
 }
 
-int chess_cpp::gen_moves(Board &board, Move *arr) {
-    Move *ptr = arr;
-    U64 occupancy = board.bitboards[White | All] | board.bitboards[Black | All];
+/* -------------------------------------------------------------------------- */
+/*                               Main generator                               */
+/* -------------------------------------------------------------------------- */
+template<Colors FRIENDLY>
+void gen_legal_moves(Board &board, Move *&ptr) {
+    Colors ENEMY = !FRIENDLY;
+    
+    U64 occupancy = board.bitboards[White|All] | board.bitboards[Black|All];
+    U64 enemy = board.bitboards[ENEMY|All];
+    int kingPos = lsb_idx(board.bitboards[FRIENDLY|King]);
 
     // always generate king moves first
-    gen_king_moves(board, ptr, occupancy);
+    gen_king_moves<FRIENDLY>(board, ptr, occupancy);
 
     // calculate pieces giving check
-    U64 enemy = board.bitboards[board.enemy_color() | All];
-    U64 kingBitBoard = board.bitboards[board.active_color() | King];
-    int kingPos = pop_lsb(kingBitBoard);
-    U64 attackingKing = get_attackers(kingPos, board, occupancy);
+    U64 attackingKing = find_enemy_attackers<FRIENDLY>(kingPos, board, occupancy);
 
     switch (count_occupied(attackingKing)) {
         // double check
@@ -526,40 +483,47 @@ int chess_cpp::gen_moves(Board &board, Move *arr) {
         }
         // single check
         case 1: {
-            U64 captures = attackingKing;
+            int attackerPos = lsb_idx(attackingKing);
 
-            U64 tmp = attackingKing;
-            int attackerPos = pop_lsb(tmp);
-            U64 blockers = (board.pieces[attackerPos]&0b111) <= Knight
-                ? 0ULL
-                : SLIDER_RANGE[kingPos][attackerPos];
+            U64 blockers = board.pieces[attackerPos]&0b110
+                ? SLIDER_RANGE[kingPos][attackerPos]
+                : 0ULL; // a knight cannot move out of a pin
 
-            U64 movesMask = captures | blockers;
+            U64 movesMask = attackingKing | blockers;
+            U64 pinned = gen_pinned_pieces<FRIENDLY>(board, ptr, kingPos, occupancy, attackingKing, attackingKing, blockers);
 
-            U64 pinned = gen_pinned_pieces(board, ptr, kingPos, occupancy, enemy, attackingKing, captures, blockers);
-
-            gen_pawn_moves(board, ptr, occupancy, pinned, captures, blockers);
-            gen_knight_moves(board, ptr, occupancy, pinned, movesMask);
-            gen_bishop_moves(board, ptr, occupancy, pinned, movesMask);
-            gen_rook_moves(board, ptr, occupancy, pinned, movesMask);
-            gen_queen_moves(board, ptr, occupancy, pinned, movesMask);
+            gen_pawn_moves<FRIENDLY>(board, ptr, occupancy, pinned, attackingKing, blockers, kingPos);
+            gen_knight_moves<FRIENDLY>(board, ptr, pinned, movesMask);
+            gen_bishop_moves<FRIENDLY>(board, ptr, occupancy, pinned, movesMask);
+            gen_rook_moves<FRIENDLY>(board, ptr, occupancy, pinned, movesMask);
+            gen_queen_moves<FRIENDLY>(board, ptr, occupancy, pinned, movesMask);
             break;
         }
         // not in check - standard move generation
         case 0: {
-            U64 pinned = gen_pinned_pieces(board, ptr, kingPos, occupancy, enemy, attackingKing, FULL_BB, FULL_BB);
+            U64 pinned = gen_pinned_pieces<FRIENDLY>(board, ptr, kingPos, occupancy, 0ULL, FULL_BB, FULL_BB);
 
-            gen_castling(board, ptr, occupancy);
-            gen_pawn_moves(board, ptr, occupancy, pinned);
-            gen_knight_moves(board, ptr, occupancy, pinned);
-            gen_bishop_moves(board, ptr, occupancy, pinned);
-            gen_rook_moves(board, ptr, occupancy, pinned);
-            gen_queen_moves(board, ptr, occupancy, pinned);
+            gen_castling_moves<FRIENDLY>(board, ptr, occupancy);
+            gen_pawn_moves<FRIENDLY>(board, ptr, occupancy, pinned, FULL_BB, FULL_BB, kingPos);
+            gen_knight_moves<FRIENDLY>(board, ptr, pinned, FULL_BB);
+            gen_bishop_moves<FRIENDLY>(board, ptr, occupancy, pinned, FULL_BB);
+            gen_rook_moves<FRIENDLY>(board, ptr, occupancy, pinned, FULL_BB);
+            gen_queen_moves<FRIENDLY>(board, ptr, occupancy, pinned, FULL_BB);
             break;
         }
         default: {
             throw std::runtime_error("Invalid number of attackers on the king");
         }
+    }
+}
+
+int chess_cpp::gen_moves(Board &board, Move *arr) {
+    Move *ptr = arr;
+
+    if (board.white_to_move) {
+        gen_legal_moves<White>(board, ptr);
+    } else {
+        gen_legal_moves<Black>(board, ptr);
     }
 
     return ptr - arr;

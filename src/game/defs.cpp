@@ -551,3 +551,12 @@ std::string chess_cpp::bb_to_string(U64 bitboard) {
 
     return ss.str();
 }
+
+/* -------------------------------------------------------------------------- */
+/*                                   Colors                                   */
+/* -------------------------------------------------------------------------- */
+chess_cpp::Colors chess_cpp::operator!(chess_cpp::Colors color) {
+    return color == White
+        ? Black
+        : White;
+}

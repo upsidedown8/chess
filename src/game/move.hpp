@@ -3,9 +3,9 @@
 
 #include "defs.hpp"
 
-#define MOVEPROMOTION_PAWN   0b0000000000000000
-#define MOVEPROMOTION_KNIGHT 0b0000000000000001
-#define MOVEPROMOTION_BISHOP 0b0000000000000010
+#define MOVEPROMOTION_KNIGHT 0b0000000000000000
+#define MOVEPROMOTION_BISHOP 0b0000000000000001
+#define MOVEPROMOTION_ROOK   0b0000000000000010
 #define MOVEPROMOTION_QUEEN  0b0000000000000011
 
 #define MOVEFLAG_PIECE       0b0000000000000011
@@ -20,6 +20,21 @@
 #define MOVETYPE_ENPASSANT   0b0000000000001000
 #define MOVETYPE_PROMOTION   0b0000000000001100
 
+#define CREATE_MOVE(start, end, flags) \
+    (end<<10) | (start<<4) | (flags)
+
+#define GET_MOVE_START(move, start) \
+    start = (move & MOVEFLAG_START)>>4;
+
+#define GET_MOVE_END(move, end) \
+    end = (move & MOVEFLAG_END)>>10;
+
+#define GET_MOVE_TYPE(move, type) \
+    type = move & MOVEFLAG_TYPE;
+
+#define GET_MOVE_PIECE(move, piece) \
+    piece = move & MOVEFLAG_PIECE;
+
 namespace chess_cpp {
 
 /* -------------------------------------------------------------------------- */
@@ -31,33 +46,15 @@ namespace chess_cpp {
  * end     start   castling/promotion/en passant flags
  */
 
-class Move {
-public:
-    U16 value;
+typedef U16 Move;
 
-    Move();
-    Move(int start, int end, U8 flags);
+std::string move_to_string(Move &move);
 
-    U8 get_start();
-    U8 get_end();
-
-    std::string to_string();
-};
-
-class UndoInfo {
-private:
+struct UndoInfo {
     U8 castling;
     U8 fifty_move;
     U8 en_passant;
     int captured;
-    
-public:
-    UndoInfo(int castling, int fiftyMove, int enPassant, int piece);
-    
-    U8 get_castling();
-    U8 get_fifty_move();
-    U8 get_en_passant();
-    int get_captured_piece();
 };
 
 }

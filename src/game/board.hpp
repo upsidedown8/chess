@@ -31,8 +31,7 @@ public:
     Board(const std::string &str);
 
     void reset();
-    void update_bitboards();
-    UndoInfo make_move(Move &move);
+    void make_move(Move &move, UndoInfo &info);
     void undo_move(Move &move, UndoInfo &info);
 
     Colors active_color();

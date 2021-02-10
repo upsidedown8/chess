@@ -21,11 +21,12 @@ U64 Perft(Board &board, int depth, bool displayNodes) {
         return numMoves;
 
     U64 nodes = 0;
+    UndoInfo info;
     for (int i = 0; i < numMoves; i++) {
-        UndoInfo info = board.make_move(MOVES[depth][i]);
+        board.make_move(MOVES[depth][i], info);
         U64 childNodes = Perft(board, depth - 1);
-        if (displayNodes)
-            std::cout << MOVES[depth][i].to_string() << ": " << childNodes << std::endl;
+        // if (displayNodes)
+        //     std::cout << move_to_string(MOVES[depth][i]) << ": " << childNodes << std::endl;
         nodes += childNodes;
         board.undo_move(MOVES[depth][i], info);
     }
@@ -62,12 +63,13 @@ void undo_test(const std::string &fen, int &num) {
     Board board(fen);
 
     int numMoves = gen_moves(board, MOVES[0]);
+    UndoInfo info;
     for (int i = 0; i < numMoves; i++) {
         Board testBoard(fen);
 
-        UndoInfo info = testBoard.make_move(MOVES[0][i]);
+        testBoard.make_move(MOVES[0][i], info);
         testBoard.undo_move(MOVES[0][i], info);
-        ASSERT_TRUE(testBoard == board) << "test no: " << num << " move: " << MOVES[0][i].to_string();
+        ASSERT_TRUE(testBoard == board) << "test no: " << num << " move: " << move_to_string(MOVES[0][i]);
     }
     ++num;
 }
@@ -190,5 +192,9 @@ int main(int argc, char **argv) {
     testing::InitGoogleTest(&argc, argv);
     chess_cpp::init();
 
+    // Perft("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", 6);
+
+
+    // return 0;
     return RUN_ALL_TESTS();
 }

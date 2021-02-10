@@ -149,32 +149,25 @@ void Board::reset() {
     bool fen_success = from_string("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
     assert(fen_success);
 }
-void Board::update_bitboards() {
-    bitboards[White | All] =
-        bitboards[White | Pawn] |
-        bitboards[White | Knight] |
-        bitboards[White | Bishop] |
-        bitboards[White | Rook] |
-        bitboards[White | Queen] |
-        bitboards[White | King];
-    bitboards[Black | All] =
-        bitboards[Black | Pawn] |
-        bitboards[Black | Knight] |
-        bitboards[Black | Bishop] |
-        bitboards[Black | Rook] |
-        bitboards[Black | Queen] |
-        bitboards[Black | King];
-}
-UndoInfo Board::make_move(Move &move) {
-    U8 start = move.get_start();
-    U8 end   = move.get_end();
+void Board::make_move(Move &move, UndoInfo &info) {
+    U8 start, end, flag, piece;
+    GET_MOVE_START(move, start);
+    GET_MOVE_END(move, end);
+    GET_MOVE_TYPE(move, flag);
+    GET_MOVE_PIECE(move, piece);
 
-    UndoInfo info(castling, fifty_move, en_passant, pieces[end]);
+    Colors FRIENDLY = white_to_move ? White : Black;
+    Colors ENEMY = !FRIENDLY;
 
-    assert((pieces[start]&0b111) != None);
+    info.castling = castling;
+    info.fifty_move = fifty_move;
+    info.en_passant = en_passant;
+    info.captured = pieces[end];
+
+    assert(pieces[start] != None);
     assert(start != end);
-    assert((pieces[start]&PIECE_COLOR) == (white_to_move?White:Black));
-    assert((pieces[end]&0b111) == None || (pieces[start]&PIECE_COLOR) != (pieces[end]&PIECE_COLOR));
+    assert((pieces[start]&PIECE_COLOR) == FRIENDLY);
+    assert(pieces[end] == None || (pieces[start]&PIECE_COLOR) != (pieces[end]&PIECE_COLOR));
 
     if ((pieces[start]&0b111)==Pawn || pieces[end] != None) {
         fifty_move = 0;
@@ -182,16 +175,16 @@ UndoInfo Board::make_move(Move &move) {
         fifty_move++;
     }
 
-    switch (move.value & MOVEFLAG_TYPE) {
+    switch (flag) {
         case MOVETYPE_ENPASSANT: {
             assert(en_passant != not_on_board);
 
             clr_pos(bitboards[pieces[end]], end);
             clr_pos(bitboards[pieces[start]], start);
             set_pos(bitboards[pieces[start]], en_passant);
-            clr_pos(bitboards[(pieces[end  ]&PIECE_COLOR) | All], end);
-            clr_pos(bitboards[(pieces[start]&PIECE_COLOR) | All], start);
-            set_pos(bitboards[(pieces[start]&PIECE_COLOR) | All], en_passant);
+            clr_pos(bitboards[ENEMY|All], end);
+            clr_pos(bitboards[FRIENDLY|All], start);
+            set_pos(bitboards[FRIENDLY|All], en_passant);
 
             pieces[en_passant] = pieces[start];
             pieces[start] = None;
@@ -204,18 +197,18 @@ UndoInfo Board::make_move(Move &move) {
         case MOVETYPE_CASTLE: {
             clr_pos(bitboards[pieces[start]], start);
             set_pos(bitboards[pieces[start]], end);
-            clr_pos(bitboards[(pieces[start]&PIECE_COLOR) | All], start);
-            set_pos(bitboards[(pieces[start]&PIECE_COLOR) | All], end);
+            clr_pos(bitboards[FRIENDLY|All], start);
+            set_pos(bitboards[FRIENDLY|All], end);
 
-            int offset = start - (start%8);
-            switch (move.value&MOVEFLAG_PIECE) {
+            int offset = start & 0b111000;
+            switch (piece) {
                 case MOVECASTLE_QS: {
                     assert(castling & (0b01<<(2*white_to_move)));
 
                     set_pos(bitboards[pieces[offset]], offset+3);
                     clr_pos(bitboards[pieces[offset]], offset);
-                    set_pos(bitboards[(pieces[start]&PIECE_COLOR) | All], offset+3);
-                    clr_pos(bitboards[(pieces[start]&PIECE_COLOR) | All], offset);
+                    set_pos(bitboards[FRIENDLY|All], offset+3);
+                    clr_pos(bitboards[FRIENDLY|All], offset);
 
                     pieces[offset+3] = pieces[offset];
                     pieces[offset] = None;
@@ -227,8 +220,8 @@ UndoInfo Board::make_move(Move &move) {
 
                     set_pos(bitboards[pieces[offset+7]], offset+5);
                     clr_pos(bitboards[pieces[offset+7]], offset+7);
-                    set_pos(bitboards[(pieces[start]&PIECE_COLOR) | All], offset+5);
-                    clr_pos(bitboards[(pieces[start]&PIECE_COLOR) | All], offset+7);
+                    set_pos(bitboards[FRIENDLY|All], offset+5);
+                    clr_pos(bitboards[FRIENDLY|All], offset+7);
 
                     pieces[offset+5] = pieces[offset+7];
                     pieces[offset+7] = None;
@@ -244,18 +237,18 @@ UndoInfo Board::make_move(Move &move) {
             break;
         }
         case MOVETYPE_PROMOTION: {
-            int promotionPiece = (pieces[start]&PIECE_COLOR) | (1+(move.value & MOVEFLAG_PIECE));
+            int promotionPiece = FRIENDLY | (piece+1);
             if (pieces[end] != None) {
                 clr_pos(bitboards[pieces[end]], end);
-                clr_pos(bitboards[(pieces[end]&PIECE_COLOR) | All], end);
+                clr_pos(bitboards[ENEMY|All], end);
             }
 
             clr_pos(bitboards[pieces[start]], start);
             set_pos(bitboards[promotionPiece], end);
-            clr_pos(bitboards[(pieces[start]&PIECE_COLOR) | All], start);
-            set_pos(bitboards[(pieces[start]&PIECE_COLOR) | All], end);
+            clr_pos(bitboards[FRIENDLY|All], start);
+            set_pos(bitboards[FRIENDLY|All], end);
 
-            if (pieces[end] == (enemy_color()|Rook)) {
+            if (pieces[end] == (ENEMY|Rook)) {
                 // if FRIENDLY PAWN takes ENEMY ROOK, then that enemy side cannot be castled to
                 switch (end) {
                     case a1: castling &= ~WHITE_CASTLE_QS; break;
@@ -277,9 +270,9 @@ UndoInfo Board::make_move(Move &move) {
                 ? ((start+end)>>1)
                 : not_on_board;
 
-            if ((pieces[end]&0b111) != None) {
+            if (pieces[end] != None) {
                 clr_pos(bitboards[pieces[end]], end);
-                clr_pos(bitboards[(pieces[end]&PIECE_COLOR) | All], end);
+                clr_pos(bitboards[ENEMY|All], end);
             }
 
             switch (pieces[start] & 0b111) {
@@ -313,8 +306,8 @@ UndoInfo Board::make_move(Move &move) {
 
             clr_pos(bitboards[pieces[start]], start);
             set_pos(bitboards[pieces[start]], end);
-            clr_pos(bitboards[(pieces[start]&PIECE_COLOR) | All], start);
-            set_pos(bitboards[(pieces[start]&PIECE_COLOR) | All], end);
+            clr_pos(bitboards[FRIENDLY|All], start);
+            set_pos(bitboards[FRIENDLY|All], end);
 
             pieces[end] = pieces[start];
             pieces[start] = None;
@@ -323,77 +316,79 @@ UndoInfo Board::make_move(Move &move) {
     }
 
     white_to_move = !white_to_move;
-    return info;
 }
 void Board::undo_move(Move &move, UndoInfo &info) {
-    U8 start = move.get_start();
-    U8 end   = move.get_end();
+    U8 start, end, flag, piece;
+    GET_MOVE_START(move, start);
+    GET_MOVE_END(move, end);
+    GET_MOVE_TYPE(move, flag);
+    GET_MOVE_PIECE(move, piece);
 
     white_to_move = !white_to_move;
-    castling = info.get_castling();
-    fifty_move = info.get_fifty_move();
-    en_passant = info.get_en_passant();
-    int endPiece = info.get_captured_piece();
+    castling = info.castling;
+    fifty_move = info.fifty_move;
+    en_passant = info.en_passant;
+    int endPiece = info.captured;
+
+    Colors FRIENDLY = white_to_move ? White : Black;
+    Colors ENEMY = !FRIENDLY;
 
     assert(start != end);
-    assert((pieces[start]&0b111) == None);
-    if ((move.value & MOVEFLAG_TYPE) == MOVETYPE_ENPASSANT) {
-        assert((pieces[end]&0b111) == None);
-        assert((pieces[en_passant]&PIECE_COLOR) == (white_to_move?White:Black));
+    assert(pieces[start] == None);
+    if (flag == MOVETYPE_ENPASSANT) {
+        assert(pieces[end] == None);
+        assert((pieces[en_passant]&PIECE_COLOR) == FRIENDLY);
     } else {
-        assert((pieces[end]&0b111) != None);
-        assert((pieces[end]&PIECE_COLOR) == (white_to_move?White:Black));
+        assert(pieces[end] != None);
+        assert((pieces[end]&PIECE_COLOR) == FRIENDLY);
     }
 
-    Colors activeColor = active_color();
-    Colors enemyColor = enemy_color();
-
-    switch (move.value & MOVEFLAG_TYPE) {
+    switch (flag) {
         case MOVETYPE_ENPASSANT: {
             assert(en_passant != not_on_board);
 
-            set_pos(bitboards[enemyColor | Pawn], end);
-            set_pos(bitboards[activeColor | Pawn], start);
-            clr_pos(bitboards[activeColor | Pawn], en_passant);
-            set_pos(bitboards[enemyColor | All], end);
-            set_pos(bitboards[activeColor | All], start);
-            clr_pos(bitboards[activeColor | All], en_passant);
+            set_pos(bitboards[ENEMY | Pawn], end);
+            set_pos(bitboards[FRIENDLY | Pawn], start);
+            clr_pos(bitboards[FRIENDLY | Pawn], en_passant);
+            set_pos(bitboards[ENEMY | All], end);
+            set_pos(bitboards[FRIENDLY | All], start);
+            clr_pos(bitboards[FRIENDLY | All], en_passant);
 
             pieces[en_passant] = None;
-            pieces[start] = activeColor | Pawn;
-            pieces[end] = enemyColor | Pawn;
+            pieces[start] = FRIENDLY | Pawn;
+            pieces[end] = ENEMY | Pawn;
 
             break;
         }
         case MOVETYPE_CASTLE: {
-            set_pos(bitboards[activeColor | King], start);
-            clr_pos(bitboards[activeColor | King], end);
-            set_pos(bitboards[activeColor | All], start);
-            clr_pos(bitboards[activeColor | All], end);
+            set_pos(bitboards[FRIENDLY | King], start);
+            clr_pos(bitboards[FRIENDLY | King], end);
+            set_pos(bitboards[FRIENDLY | All], start);
+            clr_pos(bitboards[FRIENDLY | All], end);
 
-            pieces[start] = activeColor | King;
+            pieces[start] = FRIENDLY | King;
             pieces[end] = None;
 
-            int offset = start - (start%8);
-            switch (move.value&MOVEFLAG_PIECE) {
+            int offset = start & 0b111000;
+            switch (piece) {
                 case MOVECASTLE_QS: {
-                    clr_pos(bitboards[activeColor | Rook], offset+3);
-                    set_pos(bitboards[activeColor | Rook], offset);
-                    clr_pos(bitboards[activeColor | All], offset+3);
-                    set_pos(bitboards[activeColor | All], offset);
+                    clr_pos(bitboards[FRIENDLY | Rook], offset+3);
+                    set_pos(bitboards[FRIENDLY | Rook], offset);
+                    clr_pos(bitboards[FRIENDLY | All], offset+3);
+                    set_pos(bitboards[FRIENDLY | All], offset);
 
-                    pieces[offset] = activeColor | Rook;
+                    pieces[offset] = FRIENDLY | Rook;
                     pieces[offset+3] = None;
                     break;
                 }
                 case MOVECASTLE_KS:
                 default: {
-                    clr_pos(bitboards[activeColor | Rook], offset+5);
-                    set_pos(bitboards[activeColor | Rook], offset+7);
-                    clr_pos(bitboards[activeColor | All], offset+5);
-                    set_pos(bitboards[activeColor | All], offset+7);
+                    clr_pos(bitboards[FRIENDLY | Rook], offset+5);
+                    set_pos(bitboards[FRIENDLY | Rook], offset+7);
+                    clr_pos(bitboards[FRIENDLY | All], offset+5);
+                    set_pos(bitboards[FRIENDLY | All], offset+7);
 
-                    pieces[offset+7] = activeColor | Rook;
+                    pieces[offset+7] = FRIENDLY | Rook;
                     pieces[offset+5] = None;
                     break;
                 }
@@ -401,19 +396,19 @@ void Board::undo_move(Move &move, UndoInfo &info) {
             break;
         }
         case MOVETYPE_PROMOTION: {
-            int promotionPiece = activeColor | (1+(move.value & MOVEFLAG_PIECE));
+            int promotionPiece = FRIENDLY | (piece+1);
 
-            set_pos(bitboards[activeColor | Pawn], start);
+            set_pos(bitboards[FRIENDLY | Pawn], start);
             clr_pos(bitboards[promotionPiece], end);
-            set_pos(bitboards[activeColor | All], start);
-            clr_pos(bitboards[activeColor | All], end);
+            set_pos(bitboards[FRIENDLY | All], start);
+            clr_pos(bitboards[FRIENDLY | All], end);
 
-            pieces[start] = activeColor | Pawn;
+            pieces[start] = FRIENDLY | Pawn;
             pieces[end] = endPiece;
 
             if (endPiece != None) {
                 set_pos(bitboards[endPiece], end);
-                set_pos(bitboards[enemyColor | All], end);
+                set_pos(bitboards[ENEMY | All], end);
             }
 
             break;
@@ -422,14 +417,14 @@ void Board::undo_move(Move &move, UndoInfo &info) {
         default: {
             set_pos(bitboards[pieces[end]], start);
             clr_pos(bitboards[pieces[end]], end);
-            set_pos(bitboards[activeColor | All], start);
-            clr_pos(bitboards[activeColor | All], end);
+            set_pos(bitboards[FRIENDLY | All], start);
+            clr_pos(bitboards[FRIENDLY | All], end);
             pieces[start] = pieces[end];
             pieces[end] = endPiece;
 
             if (endPiece != None) {
                 set_pos(bitboards[endPiece], end);
-                set_pos(bitboards[enemyColor | All], end);
+                set_pos(bitboards[ENEMY | All], end);
             }
 
             break;

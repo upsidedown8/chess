@@ -111,6 +111,8 @@ enum Colors {
     Black = 0b1000
 };
 
+Colors operator!(Colors color);
+
 /* -------------------------------------------------------------------------- */
 /*                            Initialize all tables                           */
 /* -------------------------------------------------------------------------- */
@@ -157,6 +159,11 @@ inline U8 pop_lsb(U64 &board) {
     U64 b = board ^ (board - 1);
     unsigned int folded = (unsigned) ((b & 0xffffffff) ^ (b >> 32));
     board &= (board - 1);
+    return LSB_64_TABLE[(folded * 0x783A9B23) >> 26];
+}
+inline U8 lsb_idx(U64 &board) {
+    U64 b = board ^ (board - 1);
+    unsigned int folded = (unsigned) ((b & 0xffffffff) ^ (b >> 32));
     return LSB_64_TABLE[(folded * 0x783A9B23) >> 26];
 }
 
